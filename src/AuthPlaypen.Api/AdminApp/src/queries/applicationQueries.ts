@@ -1,5 +1,4 @@
-import { createInfiniteQuery, createMutation, useQueryClient } from "@tanstack/solid-query";
-import { createEffect } from "solid-js";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/solid-query";
 import { applicationService } from "@/services/applicationService";
 
 const FULL_LIST_PAGE_SIZE = 100;
@@ -11,26 +10,18 @@ export const applicationKeys = {
 };
 
 export function useApplications() {
-  const query = createInfiniteQuery(() => ({
+  return useInfiniteQuery(() => ({
     queryKey: applicationKeys.paged(FULL_LIST_PAGE_SIZE),
     queryFn: ({ pageParam }) => applicationService.getPaged(pageParam, FULL_LIST_PAGE_SIZE),
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: undefined as string | undefined,
     select: (data) => data.pages.flatMap((page) => page.items),
   }));
-
-  createEffect(() => {
-    if (query.hasNextPage && !query.isFetchingNextPage) {
-      query.fetchNextPage();
-    }
-  });
-
-  return query;
 }
 
 export function useCreateApplication() {
   const queryClient = useQueryClient();
-  return createMutation(() => ({
+  return useMutation(() => ({
     mutationFn: applicationService.create,
     onSuccess: () => queryClient.invalidateQueries({ queryKey: applicationKeys.all }),
   }));
@@ -38,7 +29,7 @@ export function useCreateApplication() {
 
 export function useUpdateApplication() {
   const queryClient = useQueryClient();
-  return createMutation(() => ({
+  return useMutation(() => ({
     mutationFn: ({ id, payload }: { id: string; payload: Parameters<typeof applicationService.update>[1] }) =>
       applicationService.update(id, payload),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: applicationKeys.all }),

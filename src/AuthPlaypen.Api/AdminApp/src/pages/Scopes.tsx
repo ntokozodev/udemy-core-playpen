@@ -42,6 +42,16 @@ export function Scopes() {
           </div>
         )}
       </For>
+      <Show when={query.hasNextPage}>
+        <button
+          class="rounded border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={query.isFetchingNextPage}
+          onClick={() => query.fetchNextPage()}
+          type="button"
+        >
+          {query.isFetchingNextPage ? "Loading more..." : "Load more"}
+        </button>
+      </Show>
     </div>
   );
 }
