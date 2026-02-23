@@ -8,6 +8,23 @@ import { useScopes } from "@/queries/scopeQueries";
 import type { ApplicationFlow } from "@/types/models";
 import { mapSelectionToIds } from "@/utils/selection";
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+function randomSuffix() {
+  return Math.random().toString(36).slice(2, 7);
+}
+
+function generateSecret() {
+  return crypto.randomUUID().replace(/-/g, "");
+}
+
 export function EditApplication() {
   const params = useParams();
   const navigate = useNavigate();
@@ -27,12 +44,29 @@ export function EditApplication() {
 
   const selectedApp = () => apps.data?.find((a) => a.id === params.id);
 
+  function ensureUniqueClientId(baseValue: string) {
+    const normalized = slugify(baseValue);
+    if (!normalized) return "";
+
+    const existingIds = new Set((apps.data ?? []).filter((app) => app.id !== params.id).map((app) => app.clientId));
+    if (!existingIds.has(normalized)) {
+      return normalized;
+    }
+
+    let uniqueValue = `${normalized}-${randomSuffix()}`;
+    while (existingIds.has(uniqueValue)) {
+      uniqueValue = `${normalized}-${randomSuffix()}`;
+    }
+
+    return uniqueValue;
+  }
+
   createEffect(() => {
     const app = selectedApp();
     if (!app) return;
     setDisplayName(app.displayName);
     setClientId(app.clientId);
-    setClientSecret(app.clientSecret);
+    setClientSecret(app.clientSecret || generateSecret());
     setFlow(app.flow);
     setPostLogoutRedirectUris(app.postLogoutRedirectUris ?? "");
     setRedirectUris(app.redirectUris ?? "");
@@ -45,15 +79,33 @@ export function EditApplication() {
       <h1 class="text-2xl font-semibold">Edit Application</h1>
       <label class="block">
         <span class="text-sm">Display Name</span>
-        <input class="mt-1 w-full rounded border p-2" value={displayName()} onInput={(e) => setDisplayName(e.currentTarget.value)} />
+        <input
+          class="mt-1 w-full rounded border p-2"
+          value={displayName()}
+          onInput={(e) => {
+            const name = e.currentTarget.value;
+            setDisplayName(name);
+            setClientId(ensureUniqueClientId(name));
+          }}
+        />
       </label>
       <label class="block">
         <span class="text-sm">Client ID</span>
-        <input class="mt-1 w-full rounded border p-2" value={clientId()} onInput={(e) => setClientId(e.currentTarget.value)} />
+        <input
+          class="mt-1 w-full rounded border p-2"
+          value={clientId()}
+          onInput={(e) => setClientId(e.currentTarget.value)}
+          onBlur={(e) => setClientId(ensureUniqueClientId(e.currentTarget.value))}
+        />
       </label>
       <label class="block">
         <span class="text-sm">Client Secret</span>
-        <input class="mt-1 w-full rounded border p-2" value={clientSecret()} onInput={(e) => setClientSecret(e.currentTarget.value)} />
+        <div class="mt-1 flex gap-2">
+          <input class="w-full rounded border p-2" value={clientSecret()} onInput={(e) => setClientSecret(e.currentTarget.value)} />
+          <button class="rounded border px-3 py-2" type="button" onClick={() => setClientSecret(generateSecret())}>
+            Regenerate
+          </button>
+        </div>
       </label>
       <label class="block">
         <span class="text-sm">Flow</span>
@@ -89,7 +141,7 @@ export function EditApplication() {
             id: app.id,
             payload: {
               displayName: displayName(),
-              clientId: clientId(),
+              clientId: ensureUniqueClientId(clientId()),
               clientSecret: clientSecret(),
               flow: flow(),
               redirectUris: redirectUris(),

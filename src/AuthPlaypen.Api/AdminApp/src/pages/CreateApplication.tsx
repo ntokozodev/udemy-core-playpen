@@ -2,23 +2,58 @@ import { useNavigate } from "@solidjs/router";
 import { createSignal } from "solid-js";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { MultiSelect } from "@/components/MultiSelect";
-import { useCreateApplication } from "@/queries/applicationQueries";
+import { useApplications, useCreateApplication } from "@/queries/applicationQueries";
 import { useScopes } from "@/queries/scopeQueries";
 import type { ApplicationFlow } from "@/types/models";
 import { mapSelectionToIds } from "@/utils/selection";
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+function randomSuffix() {
+  return Math.random().toString(36).slice(2, 7);
+}
+
+function generateSecret() {
+  return crypto.randomUUID().replace(/-/g, "");
+}
+
 export function CreateApplication() {
   const navigate = useNavigate();
+  const applications = useApplications();
   const createApplication = useCreateApplication();
   const scopes = useScopes();
 
   const [displayName, setDisplayName] = createSignal("");
   const [clientId, setClientId] = createSignal("");
-  const [clientSecret, setClientSecret] = createSignal("");
+  const [clientSecret, setClientSecret] = createSignal(generateSecret());
   const [flow, setFlow] = createSignal<ApplicationFlow>("ClientCredentials");
   const [postLogoutRedirectUris, setPostLogoutRedirectUris] = createSignal("");
   const [redirectUris, setRedirectUris] = createSignal("");
   const [scopeIds, setScopeIds] = createSignal<string[]>([]);
+
+  function ensureUniqueClientId(baseValue: string) {
+    const normalized = slugify(baseValue);
+    if (!normalized) return "";
+
+    const existingIds = new Set((applications.data ?? []).map((app) => app.clientId));
+    if (!existingIds.has(normalized)) {
+      return normalized;
+    }
+
+    let uniqueValue = `${normalized}-${randomSuffix()}`;
+    while (existingIds.has(uniqueValue)) {
+      uniqueValue = `${normalized}-${randomSuffix()}`;
+    }
+
+    return uniqueValue;
+  }
 
   return (
     <div class="space-y-4">
@@ -26,15 +61,33 @@ export function CreateApplication() {
       <h1 class="text-2xl font-semibold">Create Application</h1>
       <label class="block">
         <span class="text-sm">Display Name</span>
-        <input class="mt-1 w-full rounded border p-2" value={displayName()} onInput={(e) => setDisplayName(e.currentTarget.value)} />
+        <input
+          class="mt-1 w-full rounded border p-2"
+          value={displayName()}
+          onInput={(e) => {
+            const name = e.currentTarget.value;
+            setDisplayName(name);
+            setClientId(ensureUniqueClientId(name));
+          }}
+        />
       </label>
       <label class="block">
         <span class="text-sm">Client ID</span>
-        <input class="mt-1 w-full rounded border p-2" value={clientId()} onInput={(e) => setClientId(e.currentTarget.value)} />
+        <input
+          class="mt-1 w-full rounded border p-2"
+          value={clientId()}
+          onInput={(e) => setClientId(e.currentTarget.value)}
+          onBlur={(e) => setClientId(ensureUniqueClientId(e.currentTarget.value))}
+        />
       </label>
       <label class="block">
         <span class="text-sm">Client Secret</span>
-        <input class="mt-1 w-full rounded border p-2" value={clientSecret()} onInput={(e) => setClientSecret(e.currentTarget.value)} />
+        <div class="mt-1 flex gap-2">
+          <input class="w-full rounded border p-2" value={clientSecret()} onInput={(e) => setClientSecret(e.currentTarget.value)} />
+          <button class="rounded border px-3 py-2" type="button" onClick={() => setClientSecret(generateSecret())}>
+            Regenerate
+          </button>
+        </div>
       </label>
       <label class="block">
         <span class="text-sm">Flow</span>
@@ -67,7 +120,7 @@ export function CreateApplication() {
           createApplication.mutate(
             {
               displayName: displayName(),
-              clientId: clientId(),
+              clientId: ensureUniqueClientId(clientId()),
               clientSecret: clientSecret(),
               flow: flow(),
               redirectUris: redirectUris(),
