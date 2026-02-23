@@ -4,6 +4,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { MultiSelect } from "@/components/MultiSelect";
 import { useApplications } from "@/queries/applicationQueries";
 import { useCreateScope } from "@/queries/scopeQueries";
+import { mapSelectionToIds } from "@/utils/selection";
 
 export function CreateScope() {
   const navigate = useNavigate();
@@ -45,7 +46,7 @@ export function CreateScope() {
               displayName: displayName(),
               scopeName: scopeName(),
               description: description(),
-              applicationIds: applicationIds(),
+              applicationIds: mapSelectionToIds(applicationIds(), (apps.data ?? []).map((app) => app.id)),
             },
             {
               onSuccess: () => navigate("/scopes"),

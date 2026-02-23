@@ -24,8 +24,9 @@ export function Applications() {
         <LoadingSpinner label="Loading applications..." />
       </Show>
       <Show when={query.isError}>
-        <div class="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-          Could not fetch applications. {getErrorMessage(query.error)}
+        <div class="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
+          <h3 class="text-sm font-medium text-red-800">Could not fetch applications</h3>
+          <p class="mt-2 text-sm text-red-700">{getErrorMessage(query.error)}</p>
         </div>
       </Show>
       <For each={query.data ?? []}>

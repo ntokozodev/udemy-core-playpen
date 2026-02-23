@@ -4,6 +4,7 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { MultiSelect } from "@/components/MultiSelect";
 import { useApplications } from "@/queries/applicationQueries";
 import { useScopes, useUpdateScope } from "@/queries/scopeQueries";
+import { mapSelectionToIds } from "@/utils/selection";
 
 export function EditScope() {
   const params = useParams();
@@ -60,7 +61,7 @@ export function EditScope() {
               displayName: displayName(),
               scopeName: scopeName(),
               description: description(),
-              applicationIds: selectedAppIds(),
+              applicationIds: mapSelectionToIds(selectedAppIds(), (apps.data ?? []).map((app) => app.id)),
             },
           });
         }}

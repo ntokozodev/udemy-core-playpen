@@ -5,6 +5,7 @@ import { MultiSelect } from "@/components/MultiSelect";
 import { useApplications, useUpdateApplication } from "@/queries/applicationQueries";
 import { useScopes } from "@/queries/scopeQueries";
 import type { ApplicationFlow } from "@/types/models";
+import { mapSelectionToIds } from "@/utils/selection";
 
 export function EditApplication() {
   const params = useParams();
@@ -89,7 +90,7 @@ export function EditApplication() {
               flow: flow(),
               redirectUris: redirectUris(),
               postLogoutRedirectUris: postLogoutRedirectUris(),
-              scopeIds: selectedScopeIds(),
+              scopeIds: mapSelectionToIds(selectedScopeIds(), (scopes.data ?? []).map((scope) => scope.id)),
             },
           });
         }}

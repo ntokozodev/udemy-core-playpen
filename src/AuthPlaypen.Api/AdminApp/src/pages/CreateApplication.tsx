@@ -5,6 +5,7 @@ import { MultiSelect } from "@/components/MultiSelect";
 import { useCreateApplication } from "@/queries/applicationQueries";
 import { useScopes } from "@/queries/scopeQueries";
 import type { ApplicationFlow } from "@/types/models";
+import { mapSelectionToIds } from "@/utils/selection";
 
 export function CreateApplication() {
   const navigate = useNavigate();
@@ -71,7 +72,7 @@ export function CreateApplication() {
               flow: flow(),
               redirectUris: redirectUris(),
               postLogoutRedirectUris: postLogoutRedirectUris(),
-              scopeIds: scopeIds(),
+              scopeIds: mapSelectionToIds(scopeIds(), (scopes.data ?? []).map((scope) => scope.id)),
             },
             {
               onSuccess: () => navigate("/applications"),
