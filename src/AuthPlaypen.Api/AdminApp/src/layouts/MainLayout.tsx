@@ -17,7 +17,9 @@ export function MainLayout(props: { children: unknown }) {
         </nav>
       </aside>
       <main class="flex-1 bg-slate-50 p-6">
-        {props.children}
+        <div class="mx-auto w-full max-w-4xl">
+          {props.children}
+        </div>
       </main>
     </div>
   );

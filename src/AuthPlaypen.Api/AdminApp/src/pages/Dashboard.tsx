@@ -5,7 +5,7 @@ export function Dashboard() {
   const swaggerUrl = `${window.location.origin}/swagger`;
 
   return (
-    <div class="mx-auto max-w-4xl space-y-8">
+    <div class="space-y-8">
       <Breadcrumbs items={[{ label: "Home" }]} />
       <section class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <p class="text-sm font-medium uppercase tracking-wide text-blue-600">Welcome</p>
