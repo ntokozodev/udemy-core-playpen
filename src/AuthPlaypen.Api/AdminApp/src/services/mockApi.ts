@@ -47,6 +47,18 @@ export async function mockHttp<T>(path: string, init?: RequestInit): Promise<T> 
     return toCursorPage(items, cursor, pageSize) as T;
   }
 
+
+  if (method === "GET" && pathname === "/applications/search") {
+    const term = (params.get("term") ?? "").trim().toLowerCase();
+    const pageSize = Number(params.get("pageSize") ?? "20");
+    const items = mockStore
+      .getApplications()
+      .filter((item) => !term || item.displayName.toLowerCase().includes(term) || item.clientId.toLowerCase().includes(term))
+      .slice(0, pageSize)
+      .map(appToReference);
+    return items as T;
+  }
+
   if (method === "GET" && pathname.startsWith("/applications/")) {
     const id = pathname.split("/")[2];
     const app = mockStore.getApplications().find((item) => item.id === id);
@@ -89,6 +101,18 @@ export async function mockHttp<T>(path: string, init?: RequestInit): Promise<T> 
     const cursor = params.get("cursor") ?? undefined;
     const items = [...mockStore.getScopes()].sort((a, b) => a.id.localeCompare(b.id));
     return toCursorPage(items, cursor, pageSize) as T;
+  }
+
+
+  if (method === "GET" && pathname === "/scopes/search") {
+    const term = (params.get("term") ?? "").trim().toLowerCase();
+    const pageSize = Number(params.get("pageSize") ?? "20");
+    const items = mockStore
+      .getScopes()
+      .filter((item) => !term || item.displayName.toLowerCase().includes(term) || item.scopeName.toLowerCase().includes(term))
+      .slice(0, pageSize)
+      .map(scopeToReference);
+    return items as T;
   }
 
   if (method === "GET" && pathname.startsWith("/scopes/")) {

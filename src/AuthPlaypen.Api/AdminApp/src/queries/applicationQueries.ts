@@ -32,7 +32,7 @@ export function useSearchApplications(term: () => string, enabled: () => boolean
   return useQuery(() => ({
     queryKey: applicationKeys.search(term()),
     queryFn: () => applicationService.search(term()),
-    enabled: enabled() && term().trim().length > 1,
+    enabled: enabled() && term().trim().length > 0,
   }));
 }
 

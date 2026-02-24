@@ -12,8 +12,8 @@ function getErrorMessage(error: unknown): string {
 export function Scopes() {
   const query = useScopes();
   const [searchTerm, setSearchTerm] = createSignal("");
-  const searchQuery = useSearchScopes(searchTerm, () => searchTerm().trim().length > 1);
-  const isSearching = () => searchTerm().trim().length > 1;
+  const searchQuery = useSearchScopes(searchTerm, () => searchTerm().trim().length > 0);
+  const isSearching = () => searchTerm().trim().length > 0;
   const scopes = () => (isSearching() ? searchQuery.data ?? [] : query.data ?? []);
 
   return (

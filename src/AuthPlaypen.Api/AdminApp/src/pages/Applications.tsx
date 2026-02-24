@@ -12,8 +12,8 @@ function getErrorMessage(error: unknown): string {
 export function Applications() {
   const query = useApplications();
   const [searchTerm, setSearchTerm] = createSignal("");
-  const searchQuery = useSearchApplications(searchTerm, () => searchTerm().trim().length > 1);
-  const isSearching = () => searchTerm().trim().length > 1;
+  const searchQuery = useSearchApplications(searchTerm, () => searchTerm().trim().length > 0);
+  const isSearching = () => searchTerm().trim().length > 0;
   const applications = () => (isSearching() ? searchQuery.data ?? [] : query.data ?? []);
 
   return (

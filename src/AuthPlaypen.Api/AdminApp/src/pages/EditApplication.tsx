@@ -3,7 +3,7 @@ import { createEffect, createSignal } from "solid-js";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { SearchMultiSelect } from "@/components/SearchMultiSelect";
 import { useApplicationById, useUpdateApplication } from "@/queries/applicationQueries";
-import { useSearchScopes } from "@/queries/scopeQueries";
+import { useScopes } from "@/queries/scopeQueries";
 import type { ApplicationFlow } from "@/types/models";
 
 function slugify(value: string) { return value.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-"); }
@@ -24,7 +24,7 @@ export function EditApplication() {
   const [selectedScopeIds, setSelectedScopeIds] = createSignal<string[]>([]);
   const [scopeSearchTerm, setScopeSearchTerm] = createSignal("");
   const [showClientId, setShowClientId] = createSignal(false);
-  const scopeSearch = useSearchScopes(scopeSearchTerm, () => true);
+  const scopesQuery = useScopes();
 
   createEffect(() => {
     const app = appQuery.data;
@@ -44,7 +44,7 @@ export function EditApplication() {
       <label class="block"><span class="text-sm">Flow</span><select class="mt-1 w-full rounded border p-2" value={flow()} onChange={(e)=>setFlow(e.currentTarget.value as ApplicationFlow)}><option value="ClientCredentials">ClientCredentials</option><option value="AuthorizationWithPKCE">AuthorizationWithPKCE</option></select></label>
       <label class="block"><span class="text-sm">Redirect Uris</span><input class="mt-1 w-full rounded border p-2" value={redirectUris()} onInput={(e)=>setRedirectUris(e.currentTarget.value)} /></label>
       <label class="block"><span class="text-sm">Post Logout Redirect Uris</span><input class="mt-1 w-full rounded border p-2" value={postLogoutRedirectUris()} onInput={(e)=>setPostLogoutRedirectUris(e.currentTarget.value)} /></label>
-      <SearchMultiSelect label="Scopes" searchTerm={scopeSearchTerm()} onSearchTermChange={setScopeSearchTerm} options={(scopeSearch.data ?? []).map((s) => ({ id: s.id, label: `${s.displayName} (${s.scopeName})` }))} selected={selectedScopeIds()} onChange={setSelectedScopeIds} />
+      <SearchMultiSelect label="Scopes" searchTerm={scopeSearchTerm()} onSearchTermChange={setScopeSearchTerm} options={(scopesQuery.data ?? []).map((s) => ({ id: s.id, label: `${s.displayName} (${s.scopeName})` }))} selected={selectedScopeIds()} onChange={setSelectedScopeIds} initialVisibleCount={6} />
       <button class="rounded bg-blue-700 px-3 py-2 text-white" onClick={()=>{const app=appQuery.data;if(!app)return;update.mutate({id:app.id,payload:{displayName:displayName(),clientId:slugify(clientId()),clientSecret:clientSecret(),flow:flow(),redirectUris:redirectUris(),postLogoutRedirectUris:postLogoutRedirectUris(),scopeIds:selectedScopeIds()}},{onSuccess:()=>navigate(`/applications/${app.id}`)});}}>Save</button>
     </div>
   );

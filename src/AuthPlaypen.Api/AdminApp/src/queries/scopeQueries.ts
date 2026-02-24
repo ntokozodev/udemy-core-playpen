@@ -32,7 +32,7 @@ export function useSearchScopes(term: () => string, enabled: () => boolean) {
   return useQuery(() => ({
     queryKey: scopeKeys.search(term()),
     queryFn: () => scopeService.search(term()),
-    enabled: enabled() && term().trim().length > 1,
+    enabled: enabled() && term().trim().length > 0,
   }));
 }
 
