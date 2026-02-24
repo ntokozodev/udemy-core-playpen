@@ -2,7 +2,8 @@ import { A } from "@solidjs/router";
 import { For, Show } from "solid-js";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
-import { useApplications } from "@/queries/applicationQueries";
+import { useApplications, useSearchApplications } from "@/queries/applicationQueries";
+import { createSignal } from "solid-js";
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unable to load applications. Please try again.";
@@ -10,6 +11,10 @@ function getErrorMessage(error: unknown): string {
 
 export function Applications() {
   const query = useApplications();
+  const [searchTerm, setSearchTerm] = createSignal("");
+  const searchQuery = useSearchApplications(searchTerm, () => searchTerm().trim().length > 1);
+  const isSearching = () => searchTerm().trim().length > 1;
+  const applications = () => (isSearching() ? searchQuery.data ?? [] : query.data ?? []);
 
   return (
     <div class="space-y-4">
@@ -20,8 +25,18 @@ export function Applications() {
           + Create
         </A>
       </div>
+      <input
+        class="w-full rounded border border-slate-300 px-3 py-2 text-sm"
+        onInput={(event) => setSearchTerm(event.currentTarget.value)}
+        placeholder="Search by display name or client id"
+        type="text"
+        value={searchTerm()}
+      />
       <Show when={query.isPending}>
         <LoadingSpinner label="Loading applications..." />
+      </Show>
+      <Show when={searchQuery.isPending && isSearching()}>
+        <LoadingSpinner label="Searching applications..." />
       </Show>
       <Show when={query.isError}>
         <div class="bg-red-50 border border-red-200 rounded-md p-4 mb-6">
@@ -29,7 +44,7 @@ export function Applications() {
           <p class="mt-2 text-sm text-red-700">{getErrorMessage(query.error)}</p>
         </div>
       </Show>
-      <For each={query.data ?? []}>
+      <For each={applications()}>
         {(app) => (
           <div class="flex items-start justify-between rounded border border-slate-200 bg-white p-4">
             <div>
@@ -42,7 +57,7 @@ export function Applications() {
           </div>
         )}
       </For>
-      <Show when={query.hasNextPage}>
+      <Show when={query.hasNextPage && !isSearching()}>
         <button
           class="rounded border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
           disabled={query.isFetchingNextPage}

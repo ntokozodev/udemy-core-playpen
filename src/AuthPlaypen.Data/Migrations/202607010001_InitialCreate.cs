@@ -19,7 +19,11 @@ public partial class InitialCreate : Migration
                 ClientSecret = table.Column<string>(type: "text", nullable: false),
                 Flow = table.Column<string>(type: "text", nullable: false),
                 PostLogoutRedirectUris = table.Column<string>(type: "text", nullable: true),
-                RedirectUris = table.Column<string>(type: "text", nullable: true)
+                RedirectUris = table.Column<string>(type: "text", nullable: true),
+                CreatedBy = table.Column<string>(type: "text", nullable: false, defaultValue: "Unknown"),
+                CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                UpdatedBy = table.Column<string>(type: "text", nullable: false, defaultValue: "Unknown"),
+                UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
             },
             constraints: table =>
             {
@@ -33,7 +37,11 @@ public partial class InitialCreate : Migration
                 Id = table.Column<Guid>(type: "uuid", nullable: false),
                 DisplayName = table.Column<string>(type: "text", nullable: false),
                 ScopeName = table.Column<string>(type: "text", nullable: false),
-                Description = table.Column<string>(type: "text", nullable: false)
+                Description = table.Column<string>(type: "text", nullable: false),
+                CreatedBy = table.Column<string>(type: "text", nullable: false, defaultValue: "Unknown"),
+                CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()"),
+                UpdatedBy = table.Column<string>(type: "text", nullable: false, defaultValue: "Unknown"),
+                UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "NOW()")
             },
             constraints: table =>
             {
