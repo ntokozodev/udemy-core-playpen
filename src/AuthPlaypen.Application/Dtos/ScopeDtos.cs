@@ -7,7 +7,8 @@ public record ScopeDto(
     string DisplayName,
     string ScopeName,
     string Description,
-    IReadOnlyCollection<ApplicationReferenceDto> Applications);
+    IReadOnlyCollection<ApplicationReferenceDto> Applications,
+    EntityMetadataDto Metadata);
 
 public record CreateScopeRequest(
     string DisplayName,

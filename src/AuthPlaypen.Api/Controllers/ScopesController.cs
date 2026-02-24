@@ -29,6 +29,26 @@ public class ScopesController(IScopeService scopeService) : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("search")]
+    public async Task<ActionResult<IReadOnlyCollection<ScopeReferenceDto>>> Search(
+        [FromQuery] string term,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(term))
+        {
+            return Ok(Array.Empty<ScopeReferenceDto>());
+        }
+
+        if (pageSize < 1 || pageSize > 100)
+        {
+            return BadRequest(new ProblemDetails { Title = "Invalid page size", Detail = "PageSize must be between 1 and 100." });
+        }
+
+        var results = await scopeService.SearchAsync(term, pageSize, cancellationToken);
+        return Ok(results);
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ScopeDto>> GetById(Guid id, CancellationToken cancellationToken)
     {

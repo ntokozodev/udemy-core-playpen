@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/solid-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/solid-query";
 import { scopeService } from "@/services/scopeService";
 
 const FULL_LIST_PAGE_SIZE = 100;
@@ -6,6 +6,8 @@ const FULL_LIST_PAGE_SIZE = 100;
 export const scopeKeys = {
   all: ["scopes"] as const,
   paged: (pageSize: number) => [...scopeKeys.all, "paged", pageSize] as const,
+  detail: (id: string) => [...scopeKeys.all, "detail", id] as const,
+  search: (term: string) => [...scopeKeys.all, "search", term] as const,
 };
 
 export function useScopes() {
@@ -15,6 +17,22 @@ export function useScopes() {
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     initialPageParam: undefined as string | undefined,
     select: (data) => data.pages.flatMap((page) => page.items),
+  }));
+}
+
+export function useScopeById(id: () => string | undefined) {
+  return useQuery(() => ({
+    queryKey: scopeKeys.detail(id() ?? ""),
+    queryFn: () => scopeService.getById(id()!),
+    enabled: Boolean(id()),
+  }));
+}
+
+export function useSearchScopes(term: () => string, enabled: () => boolean) {
+  return useQuery(() => ({
+    queryKey: scopeKeys.search(term()),
+    queryFn: () => scopeService.search(term()),
+    enabled: enabled() && term().trim().length > 1,
   }));
 }
 

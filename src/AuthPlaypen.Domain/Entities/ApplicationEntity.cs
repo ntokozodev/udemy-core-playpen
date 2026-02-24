@@ -9,6 +9,10 @@ public class ApplicationEntity
     public ApplicationFlow Flow { get; set; }
     public string? PostLogoutRedirectUris { get; set; }
     public string? RedirectUris { get; set; }
+    public required string CreatedBy { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public required string UpdatedBy { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
 
     public ICollection<ApplicationScopeEntity> ApplicationScopes { get; set; } = new List<ApplicationScopeEntity>();
 }

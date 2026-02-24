@@ -36,8 +36,8 @@ export function Applications() {
               <div class="font-semibold">{app.displayName}</div>
               <div class="text-sm text-slate-600">{app.clientId}</div>
             </div>
-            <A class="text-sm text-blue-700" href={`/applications/${app.id}/edit`}>
-              Edit
+            <A class="text-sm text-blue-700" href={`/applications/${app.id}`}>
+              Details
             </A>
           </div>
         )}

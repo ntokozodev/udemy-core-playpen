@@ -41,6 +41,24 @@ public class ScopeService(
         return scope is null ? null : ToDto(scope);
     }
 
+
+    public async Task<IReadOnlyCollection<ScopeReferenceDto>> SearchAsync(string searchTerm, int pageSize, CancellationToken cancellationToken)
+    {
+        var normalizedSearchTerm = searchTerm.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedSearchTerm))
+        {
+            return Array.Empty<ScopeReferenceDto>();
+        }
+
+        return await dbContext.Scopes
+            .AsNoTracking()
+            .Where(s => EF.Functions.ILike(s.DisplayName, $"%{normalizedSearchTerm}%") || EF.Functions.ILike(s.ScopeName, $"%{normalizedSearchTerm}%"))
+            .OrderBy(s => s.DisplayName)
+            .Take(pageSize)
+            .Select(s => new ScopeReferenceDto(s.Id, s.DisplayName, s.ScopeName, s.Description))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<(ScopeDto? Scope, string? Error)> CreateAsync(CreateScopeRequest request, CancellationToken cancellationToken)
     {
         if (await dbContext.Scopes.AnyAsync(s => s.ScopeName == request.ScopeName, cancellationToken))
@@ -63,7 +81,11 @@ public class ScopeService(
             Id = Guid.NewGuid(),
             DisplayName = request.DisplayName,
             ScopeName = request.ScopeName,
-            Description = request.Description
+            Description = request.Description,
+            CreatedBy = "Unknown",
+            UpdatedBy = "Unknown",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         };
 
         foreach (var appId in appIds)
@@ -119,6 +141,8 @@ public class ScopeService(
         scope.DisplayName = request.DisplayName;
         scope.ScopeName = request.ScopeName;
         scope.Description = request.Description;
+        scope.UpdatedBy = "Unknown";
+        scope.UpdatedAt = DateTimeOffset.UtcNow;
         scope.ApplicationScopes.Clear();
         foreach (var appId in appIds)
         {
@@ -176,6 +200,12 @@ public class ScopeService(
                     x.Application.ClientId))
                 .ToArray();
 
-        return new ScopeDto(scope.Id, scope.DisplayName, scope.ScopeName, scope.Description, applications);
+        return new ScopeDto(
+            scope.Id,
+            scope.DisplayName,
+            scope.ScopeName,
+            scope.Description,
+            applications,
+            new EntityMetadataDto(scope.CreatedBy, scope.CreatedAt, scope.UpdatedBy, scope.UpdatedAt));
     }
 }

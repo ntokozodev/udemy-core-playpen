@@ -35,6 +35,13 @@ partial class AuthPlaypenDbContextModelSnapshot : ModelSnapshot
                 .IsRequired()
                 .HasColumnType("text");
 
+            b.Property<DateTimeOffset>("CreatedAt")
+                .HasColumnType("timestamp with time zone");
+
+            b.Property<string>("CreatedBy")
+                .IsRequired()
+                .HasColumnType("text");
+
             b.Property<string>("DisplayName")
                 .IsRequired()
                 .HasColumnType("text");
@@ -47,6 +54,13 @@ partial class AuthPlaypenDbContextModelSnapshot : ModelSnapshot
                 .HasColumnType("text");
 
             b.Property<string>("RedirectUris")
+                .HasColumnType("text");
+
+            b.Property<DateTimeOffset>("UpdatedAt")
+                .HasColumnType("timestamp with time zone");
+
+            b.Property<string>("UpdatedBy")
+                .IsRequired()
                 .HasColumnType("text");
 
             b.HasKey("Id");
@@ -78,6 +92,13 @@ partial class AuthPlaypenDbContextModelSnapshot : ModelSnapshot
                 .ValueGeneratedOnAdd()
                 .HasColumnType("uuid");
 
+            b.Property<DateTimeOffset>("CreatedAt")
+                .HasColumnType("timestamp with time zone");
+
+            b.Property<string>("CreatedBy")
+                .IsRequired()
+                .HasColumnType("text");
+
             b.Property<string>("Description")
                 .IsRequired()
                 .HasColumnType("text");
@@ -88,6 +109,13 @@ partial class AuthPlaypenDbContextModelSnapshot : ModelSnapshot
 
 
             b.Property<string>("ScopeName")
+                .IsRequired()
+                .HasColumnType("text");
+
+            b.Property<DateTimeOffset>("UpdatedAt")
+                .HasColumnType("timestamp with time zone");
+
+            b.Property<string>("UpdatedBy")
                 .IsRequired()
                 .HasColumnType("text");
 

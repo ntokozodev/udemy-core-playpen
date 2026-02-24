@@ -19,6 +19,10 @@ public class AuthPlaypenDbContext(DbContextOptions<AuthPlaypenDbContext> options
             entity.Property(x => x.ClientId).IsRequired();
             entity.Property(x => x.ClientSecret).IsRequired();
             entity.Property(x => x.Flow).HasConversion<string>().IsRequired();
+            entity.Property(x => x.CreatedBy).IsRequired();
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.Property(x => x.UpdatedBy).IsRequired();
+            entity.Property(x => x.UpdatedAt).IsRequired();
             entity.HasIndex(x => x.ClientId).IsUnique();
         });
 
@@ -29,6 +33,10 @@ public class AuthPlaypenDbContext(DbContextOptions<AuthPlaypenDbContext> options
             entity.Property(x => x.DisplayName).IsRequired();
             entity.Property(x => x.ScopeName).IsRequired();
             entity.Property(x => x.Description).IsRequired();
+            entity.Property(x => x.CreatedBy).IsRequired();
+            entity.Property(x => x.CreatedAt).IsRequired();
+            entity.Property(x => x.UpdatedBy).IsRequired();
+            entity.Property(x => x.UpdatedAt).IsRequired();
             entity.HasIndex(x => x.ScopeName).IsUnique();
         });
 

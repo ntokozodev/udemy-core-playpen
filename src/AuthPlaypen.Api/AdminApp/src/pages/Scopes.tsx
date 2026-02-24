@@ -36,8 +36,8 @@ export function Scopes() {
               <div class="font-semibold">{scope.displayName}</div>
               <div class="text-sm text-slate-600">{scope.scopeName}</div>
             </div>
-            <A class="text-sm text-blue-700" href={`/scopes/${scope.id}/edit`}>
-              Edit
+            <A class="text-sm text-blue-700" href={`/scopes/${scope.id}`}>
+              Details
             </A>
           </div>
         )}

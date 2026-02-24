@@ -2,6 +2,8 @@ using AuthPlaypen.Domain.Entities;
 
 namespace AuthPlaypen.Application.Dtos;
 
+public record EntityMetadataDto(string CreatedBy, DateTimeOffset CreatedAt, string UpdatedBy, DateTimeOffset UpdatedAt);
+
 public record ScopeReferenceDto(Guid Id, string DisplayName, string ScopeName, string Description);
 
 public record ApplicationDto(
@@ -12,7 +14,8 @@ public record ApplicationDto(
     ApplicationFlow Flow,
     string? PostLogoutRedirectUris,
     string? RedirectUris,
-    IReadOnlyCollection<ScopeReferenceDto> Scopes);
+    IReadOnlyCollection<ScopeReferenceDto> Scopes,
+    EntityMetadataDto Metadata);
 
 public record CreateApplicationRequest(
     string DisplayName,

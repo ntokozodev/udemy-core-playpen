@@ -29,6 +29,26 @@ public class ApplicationsController(IApplicationService applicationService) : Co
         return Ok(result);
     }
 
+    [HttpGet("search")]
+    public async Task<ActionResult<IReadOnlyCollection<ApplicationReferenceDto>>> Search(
+        [FromQuery] string term,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(term))
+        {
+            return Ok(Array.Empty<ApplicationReferenceDto>());
+        }
+
+        if (pageSize < 1 || pageSize > 100)
+        {
+            return BadRequest(new ProblemDetails { Title = "Invalid page size", Detail = "PageSize must be between 1 and 100." });
+        }
+
+        var results = await applicationService.SearchAsync(term, pageSize, cancellationToken);
+        return Ok(results);
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<ApplicationDto>> GetById(Guid id, CancellationToken cancellationToken)
     {

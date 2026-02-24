@@ -46,6 +46,24 @@ public class ApplicationService(
         return ToDto(application);
     }
 
+
+    public async Task<IReadOnlyCollection<ApplicationReferenceDto>> SearchAsync(string searchTerm, int pageSize, CancellationToken cancellationToken)
+    {
+        var normalizedSearchTerm = searchTerm.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedSearchTerm))
+        {
+            return Array.Empty<ApplicationReferenceDto>();
+        }
+
+        return await dbContext.Applications
+            .AsNoTracking()
+            .Where(a => EF.Functions.ILike(a.DisplayName, $"%{normalizedSearchTerm}%") || EF.Functions.ILike(a.ClientId, $"%{normalizedSearchTerm}%"))
+            .OrderBy(a => a.DisplayName)
+            .Take(pageSize)
+            .Select(a => new ApplicationReferenceDto(a.Id, a.DisplayName, a.ClientId))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<(ApplicationDto? Application, string? Error)> CreateAsync(CreateApplicationRequest request, CancellationToken cancellationToken)
     {
         if (await dbContext.Applications.AnyAsync(a => a.ClientId == request.ClientId, cancellationToken))
@@ -67,7 +85,11 @@ public class ApplicationService(
             ClientSecret = request.ClientSecret,
             Flow = request.Flow,
             PostLogoutRedirectUris = request.PostLogoutRedirectUris,
-            RedirectUris = request.RedirectUris
+            RedirectUris = request.RedirectUris,
+            CreatedBy = "Unknown",
+            UpdatedBy = "Unknown",
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
         };
 
         var scopeIds = request.ScopeIds?.Distinct().ToList() ?? [];
@@ -153,6 +175,8 @@ public class ApplicationService(
         application.Flow = request.Flow;
         application.PostLogoutRedirectUris = request.PostLogoutRedirectUris;
         application.RedirectUris = request.RedirectUris;
+        application.UpdatedBy = "Unknown";
+        application.UpdatedAt = DateTimeOffset.UtcNow;
 
         application.ApplicationScopes.Clear();
         foreach (var scope in scopes)
@@ -208,7 +232,8 @@ public class ApplicationService(
             application.Flow,
             application.PostLogoutRedirectUris,
             application.RedirectUris,
-            scopeDtos);
+            scopeDtos,
+            new EntityMetadataDto(application.CreatedBy, application.CreatedAt, application.UpdatedBy, application.UpdatedAt));
     }
 
     private static string? ValidateRedirectUris(ApplicationFlow flow, string? redirectUris, string? postLogoutRedirectUris)
