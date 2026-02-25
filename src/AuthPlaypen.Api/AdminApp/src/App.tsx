@@ -1,7 +1,9 @@
 import { Route, Router } from "@solidjs/router";
+import { RequireAuth } from "@/components/auth/RequireAuth";
 import { MainLayout } from "@/layouts/MainLayout";
 import { ApplicationDetails } from "@/pages/ApplicationDetails";
 import { Applications } from "@/pages/Applications";
+import { AuthCallback } from "@/pages/AuthCallback";
 import { CreateApplication } from "@/pages/CreateApplication";
 import { CreateScope } from "@/pages/CreateScope";
 import { Dashboard } from "@/pages/Dashboard";
@@ -10,10 +12,19 @@ import { EditScope } from "@/pages/EditScope";
 import { ScopeDetails } from "@/pages/ScopeDetails";
 import { Scopes } from "@/pages/Scopes";
 
+function ProtectedLayout() {
+  return (
+    <RequireAuth>
+      <MainLayout />
+    </RequireAuth>
+  );
+}
+
 export default function App() {
   return (
     <Router base="/admin">
-      <Route component={MainLayout}>
+      <Route path="/auth/callback" component={AuthCallback} />
+      <Route component={ProtectedLayout}>
         <Route path="/" component={Dashboard} />
         <Route path="/applications" component={Applications} />
         <Route path="/applications/create" component={CreateApplication} />

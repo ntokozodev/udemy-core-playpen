@@ -11,6 +11,7 @@
   "dependencies": {
     "@solidjs/router": "^0.15.3",
     "@tanstack/solid-query": "^5.64.2",
+    "oidc-client-ts": "^3.4.1",
     "solid-js": "^1.9.3"
   },
   "devDependencies": {

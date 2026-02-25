@@ -47,6 +47,29 @@ docker compose up --build
 API: `http://localhost:8080`
 Swagger UI: `http://localhost:8080/swagger`
 
+## AdminApp frontend auth flow (feature-flagged)
+
+The admin frontend includes an `oidc-client-ts` based auth flow that is intentionally disabled by default.
+
+- `VITE_ENABLE_OIDC_AUTH=false` keeps current behavior (no enforced sign-in).
+- Set `VITE_ENABLE_OIDC_AUTH=true` to require authentication for admin routes.
+- Callback route is `/admin/auth/callback`.
+- Unauthenticated users are redirected to API/OpenIddict with PKCE (`response_type=code`).
+- OIDC scope is intentionally fixed in frontend (`openid profile`) and treated as API/OpenIddict contract, not a per-frontend env setting.
+- Frontend OIDC user state is stored in `sessionStorage` (not `localStorage`).
+- The admin app should point to **API/OpenIddict authority only** and should not target Azure directly.
+
+Environment variables for `src/AuthPlaypen.Api/AdminApp`:
+
+```bash
+VITE_ENABLE_OIDC_AUTH=false
+VITE_API_OIDC_AUTHORITY=https://api-host-or-openiddict-host
+VITE_API_OIDC_CLIENT_ID=admin-client-id
+VITE_OIDC_REDIRECT_PATH=/admin/auth/callback
+VITE_OIDC_POST_LOGOUT_REDIRECT_PATH=/admin
+```
+
+
 ## API contracts
 
 ### ApplicationFlow
