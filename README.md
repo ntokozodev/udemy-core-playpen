@@ -70,6 +70,7 @@ Vite env vars are build-time and frozen in the bundle, so the admin app now load
 - Admin frontend boots and calls `GET /app-config`.
 - API returns runtime settings from `IConfiguration`.
 - Frontend maps those values into runtime config and then starts the app.
+- Even when mock data is enabled, runtime config still comes from `/app-config`, so the API must be running for the admin app to boot.
 
 Server shape (implemented in `Program.cs`):
 
@@ -118,6 +119,8 @@ AdminApp__Oidc__RedirectPath=/auth/callback
 AdminApp__Oidc__PostLogoutRedirectPath=/
 ```
 
+Use API environment variables (`AdminApp__...`) for QA/Staging/Live instead of frontend `VITE_...` values. `VITE_*` variables are build-time and become fixed in the bundled assets, while `/app-config` keeps config runtime-driven per environment.
+
 ### Local mock mode (development only)
 
 Local defaults are now defined in `src/AuthPlaypen.Api/appsettings.Development.json` under `AdminApp`:
@@ -136,6 +139,8 @@ Local defaults are now defined in `src/AuthPlaypen.Api/appsettings.Development.j
 ```
 
 The `/app-config` endpoint reads these values in Development, so local mock mode works without extra env setup.
+
+`UseMockData=true` only switches admin CRUD/data requests to the in-memory mock API. It does not bypass runtime config loading.
 
 
 ## API contracts
