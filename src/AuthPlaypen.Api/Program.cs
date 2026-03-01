@@ -1,3 +1,4 @@
+using AuthPlaypen.Api.OpenIddict.Redis;
 using AuthPlaypen.Api.Services;
 using AuthPlaypen.Application.Services;
 using AuthPlaypen.Data.Data;
@@ -5,6 +6,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using OpenIddict.Abstractions;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -76,6 +79,24 @@ if (authConfigured)
 }
 
 builder.Services.AddAuthorization();
+
+
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis")
+    ?? "localhost:6379";
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
+
+builder.Services.AddOpenIddict()
+    .AddCore(options =>
+    {
+        options.SetDefaultApplicationEntity<RedisOpenIddictApplication>();
+        options.SetDefaultScopeEntity<RedisOpenIddictScope>();
+        options.SetDefaultTokenEntity<RedisOpenIddictToken>();
+
+        options.Services.AddSingleton<IOpenIddictApplicationStore<RedisOpenIddictApplication>, RedisOpenIddictApplicationStore>();
+        options.Services.AddSingleton<IOpenIddictScopeStore<RedisOpenIddictScope>, RedisOpenIddictScopeStore>();
+        options.Services.AddSingleton<IOpenIddictTokenStore<RedisOpenIddictToken>, RedisOpenIddictTokenStore>();
+    });
 
 builder.Services.AddDbContext<AuthPlaypenDbContext>(options =>
 {

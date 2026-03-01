@@ -143,6 +143,22 @@ The `/app-config` endpoint reads these values in Development, so local mock mode
 `UseMockData=true` only switches admin CRUD/data requests to the in-memory mock API. It does not bypass runtime config loading.
 
 
+
+## OpenIddict v7 + Redis storage
+
+The API is wired to OpenIddict Core v7 using custom Redis-backed stores for:
+
+- Applications (`IOpenIddictApplicationStore`)
+- Scopes (`IOpenIddictScopeStore`)
+- Tokens (`IOpenIddictTokenStore`)
+
+Admin CRUD remains in PostgreSQL. After admin writes, the application services call sync services that upsert/delete OpenIddict entities in Redis.
+
+Configuration:
+
+- `ConnectionStrings:Postgres` for admin data
+- `ConnectionStrings:Redis` for OpenIddict stores (default `localhost:6379`)
+
 ## API contracts
 
 ### ApplicationFlow
