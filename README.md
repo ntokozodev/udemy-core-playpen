@@ -220,3 +220,71 @@ dotnet ef database update \
 ```
 
 At runtime, API remains the composition root and continues to apply migrations through `Database.Migrate()` during startup.
+
+## Client Credentials flow (Application A -> token -> external resource APIs)
+
+Auth API acts as the token orchestrator. Resource APIs (resource-b/resource-c/resource-d/etc.) are independent services that trust tokens issued by Auth API. Client authentication and token persistence use OpenIddict Redis stores (not the SQL admin CRUD database).
+
+This repo provides:
+
+- `POST /connect/token` (client credentials grant)
+
+### 1) Register scopes and clients
+
+In AdminApp:
+
+- Register resource API scopes (for example: `resource-b.read`, `resource-c.write`, `resource-d.read`).
+- Create **Application A** with flow `ClientCredentials`.
+- Assign the scopes Application A is allowed to use.
+
+> Important: scopes are assigned in AdminApp and synchronized to OpenIddict application permissions. Token requests do not need a `scope` parameter, and `/connect/token` resolves scopes from OpenIddict stores.
+
+### 2) Request token from Application A
+
+```bash
+curl -X POST "http://localhost:8080/connect/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "client_id=<application-a-client-id>" \
+  -d "client_secret=<application-a-client-secret>"
+```
+
+Response contains:
+
+- `access_token`
+- `token_type` (`Bearer`)
+- `expires_in`
+- `scope` (all scopes assigned to the client)
+
+### 3) Call any external resource API with bearer token
+
+```bash
+curl "https://resource-b.example.com/api/orders" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+### OpenIddict idiomatic token endpoint notes
+
+`POST /connect/token` is implemented as an OpenIddict server passthrough endpoint:
+
+- OpenIddict server is configured with `AllowClientCredentialsFlow()` and token endpoint URI `/connect/token`.
+- Controller reads `HttpContext.GetOpenIddictServerRequest()` and returns `SignIn(..., OpenIddictServerAspNetCoreDefaults.AuthenticationScheme)`.
+- Client and scope permissions are resolved from OpenIddict application permissions synced by AdminApp.
+
+This keeps behavior close to OpenIddict defaults while still allowing custom checks when needed.
+
+### How each external API validates token from Application A
+
+When `Application A` uses its own `client_id/client_secret`, it authenticates to Auth API (token issuer). The resulting JWT is then sent to resource APIs.
+
+Each resource API validates the JWT by checking:
+
+> A scope-authorization middleware on each resource API is a good place to enforce that token scopes are allowed for that client/application.
+
+
+1. **Signature** using the issuer signing key.
+2. **Issuer** (`iss`) matches trusted Auth API issuer.
+3. **Audience** (`aud`) matches expected audience.
+4. **Expiry** (`exp`) and token lifetime claims.
+5. **Scope claims** contain the permission(s) that API endpoint requires.
+
+So resource APIs never need Application A's secret. They only trust the token issuer and enforce their own required scopes.

@@ -2,6 +2,7 @@ using AuthPlaypen.Api.OpenIddict.Redis;
 using AuthPlaypen.Api.Services;
 using AuthPlaypen.Application.Services;
 using AuthPlaypen.Data.Data;
+using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -57,14 +58,22 @@ builder.Services.AddSwaggerGen(options =>
     }
 });
 
+var localIssuer = builder.Configuration["LocalAuth:Issuer"] ?? "https://authplaypen.local";
+var localAudience = builder.Configuration["LocalAuth:Audience"] ?? "authplaypen-resource-apis";
+var localSigningKey = builder.Configuration["LocalAuth:SigningKey"] ?? "dev-local-signing-key-change-me-1234567890";
+var accessTokenLifetimeSeconds = int.TryParse(builder.Configuration["LocalAuth:AccessTokenLifetimeSeconds"], out var parsedTokenLifetime)
+    ? parsedTokenLifetime
+    : 3600;
+
 var tenantId = builder.Configuration["AzureAd:TenantId"];
 var audience = builder.Configuration["AzureAd:Audience"];
 var authConfigured = !string.IsNullOrWhiteSpace(tenantId) && !string.IsNullOrWhiteSpace(audience);
 
+var authenticationBuilder = builder.Services.AddAuthentication();
+
 if (authConfigured)
 {
-    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+    authenticationBuilder.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
     {
         options.Authority = $"https://login.microsoftonline.com/{tenantId}/v2.0";
         options.Audience = audience;
@@ -96,6 +105,31 @@ builder.Services.AddOpenIddict()
         options.Services.AddSingleton<IOpenIddictApplicationStore<RedisOpenIddictApplication>, RedisOpenIddictApplicationStore>();
         options.Services.AddSingleton<IOpenIddictScopeStore<RedisOpenIddictScope>, RedisOpenIddictScopeStore>();
         options.Services.AddSingleton<IOpenIddictTokenStore<RedisOpenIddictToken>, RedisOpenIddictTokenStore>();
+    })
+    .AddServer(options =>
+    {
+        options.SetTokenEndpointUris("/connect/token");
+        options.AllowClientCredentialsFlow();
+
+        options.SetIssuer(new Uri(localIssuer));
+        options.AddAudiences(localAudience);
+        options.SetAccessTokenLifetime(TimeSpan.FromSeconds(accessTokenLifetimeSeconds));
+
+        var signingKeyBytes = System.Text.Encoding.UTF8.GetBytes(localSigningKey);
+        if (signingKeyBytes.Length < 32)
+        {
+            throw new InvalidOperationException("LocalAuth:SigningKey must be at least 32 bytes.");
+        }
+
+        var signingKey = new SymmetricSecurityKey(signingKeyBytes)
+        {
+            KeyId = Convert.ToHexString(SHA256.HashData(signingKeyBytes))
+        };
+
+        options.AddSigningKey(signingKey);
+
+        options.UseAspNetCore()
+            .EnableTokenEndpointPassthrough();
     });
 
 builder.Services.AddDbContext<AuthPlaypenDbContext>(options =>
@@ -146,11 +180,7 @@ app.UseHttpsRedirection();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-if (authConfigured)
-{
-    app.UseAuthentication();
-}
-
+app.UseAuthentication();
 app.UseAuthorization();
 
 
