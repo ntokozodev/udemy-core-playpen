@@ -65,6 +65,9 @@ var accessTokenLifetimeSeconds = int.TryParse(builder.Configuration["LocalAuth:A
     ? parsedTokenLifetime
     : 3600;
 
+var enableIntrospectionEndpoint = bool.TryParse(builder.Configuration["LocalAuth:EnableIntrospectionEndpoint"], out var parsedEnableIntrospection)
+    && parsedEnableIntrospection;
+
 var tenantId = builder.Configuration["AzureAd:TenantId"];
 var audience = builder.Configuration["AzureAd:Audience"];
 var authConfigured = !string.IsNullOrWhiteSpace(tenantId) && !string.IsNullOrWhiteSpace(audience);
@@ -109,6 +112,13 @@ builder.Services.AddOpenIddict()
     .AddServer(options =>
     {
         options.SetTokenEndpointUris("/connect/token");
+        options.SetConfigurationEndpointUris("/.well-known/openid-configuration");
+        options.SetJsonWebKeySetEndpointUris("/.well-known/jwks");
+        if (enableIntrospectionEndpoint)
+        {
+            options.SetIntrospectionEndpointUris("/connect/introspect");
+        }
+
         options.AllowClientCredentialsFlow();
 
         options.SetIssuer(new Uri(localIssuer));
@@ -128,8 +138,13 @@ builder.Services.AddOpenIddict()
 
         options.AddSigningKey(signingKey);
 
-        options.UseAspNetCore()
-            .EnableTokenEndpointPassthrough();
+        var aspNetCore = options.UseAspNetCore();
+        aspNetCore.EnableTokenEndpointPassthrough();
+
+        if (enableIntrospectionEndpoint)
+        {
+            aspNetCore.EnableIntrospectionEndpointPassthrough();
+        }
     });
 
 builder.Services.AddDbContext<AuthPlaypenDbContext>(options =>

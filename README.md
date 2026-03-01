@@ -239,6 +239,111 @@ In AdminApp:
 
 > Important: scopes are assigned in AdminApp and synchronized to OpenIddict application permissions. Token requests do not need a `scope` parameter, and `/connect/token` resolves scopes from OpenIddict stores.
 
+### Token validation model for resource APIs
+
+Resource APIs should **not** know or store Application A's client secret. They only validate bearer tokens and enforce required scopes/claims.
+
+In this architecture, signing keys are provided like this:
+
+- Auth API keeps the **private signing key** internally and never shares it with resource APIs.
+- Resource APIs download **public keys** from Auth API discovery metadata (`/.well-known/openid-configuration`) and the referenced `jwks_uri`.
+- In this project's local setup, discovery is served by Auth API at `https://localhost:5100/.well-known/openid-configuration` (same host as `/connect/token`, not under `/api`).
+- JWT middleware caches metadata/JWKS automatically, so high-traffic APIs can validate tokens locally (signature, issuer, audience, expiry, scopes) without calling introspection on every request.
+- When Auth API rotates keys, resource APIs refresh JWKS and continue validating with the new public keys.
+
+Example resource API setup (local JWT validation):
+
+```csharp
+services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.Authority = "https://auth-api.example.com";
+        options.Audience = "resource-b";
+        options.RequireHttpsMetadata = true;
+    });
+```
+
+Introspection remains optional:
+
+- Use local JWT validation by default for performance and independence from Auth API at request time.
+- Add introspection only for APIs that require near-real-time revocation checks.
+
+### Reusable package for resource APIs
+
+Yes. A shared NuGet package is a good fit and can expose a single extension method (for example `AddAuthApiJwtValidation(...)`) that:
+
+- Configures JWT bearer validation (`Authority`, `Audience`, issuer validation, lifetime validation).
+- Validates required scopes consistently (policy helpers/authorization handlers).
+- Uses OpenID Connect discovery + JWKS retrieval/caching for local verification at scale.
+- Optionally enables introspection as a feature flag for services that need active-token checks.
+
+This keeps each resource API lightweight while centralizing the token validation contract with Auth API.
+
+### Implemented in this repository
+
+#### Auth API discovery/JWKS/introspection endpoints
+
+`AuthPlaypen.Api` now explicitly exposes OpenID metadata/JWKS endpoints and optional introspection:
+
+- `/.well-known/openid-configuration`
+- `/.well-known/jwks`
+- `/connect/token`
+- `/connect/introspect` (only when `LocalAuth:EnableIntrospectionEndpoint=true`)
+
+#### Reusable NuGet package (resource APIs)
+
+A reusable package project was added at `src/AuthPlaypen.ResourceApiAuth`.
+
+- Package ID: `AuthPlaypen.ResourceApiAuth`
+- Main extension: `services.AddAuthApiResourceAuthentication(...)`
+- Validation mode switch: `AuthApiTokenValidationMode.Jwt` (default) or `AuthApiTokenValidationMode.Introspection`
+- Scope policy helper: `RequireAnyScope(...)`
+
+Example usage in a resource API (registration + runtime enforcement):
+
+```csharp
+using AuthPlaypen.ResourceApiAuth;
+using Microsoft.AspNetCore.Authorization;
+
+builder.Services.AddAuthApiResourceAuthentication(options =>
+{
+    // optional: defaults to https://localhost:5100
+    // options.Authority = "https://localhost:5100";
+    options.Audience = "resource-b";
+    options.ValidationMode = AuthApiTokenValidationMode.Jwt; // or Introspection
+
+    // required when ValidationMode = Introspection
+    options.IntrospectionClientId = "resource-b-introspection";
+    options.IntrospectionClientSecret = "change-me";
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    // exact scope requirement for a specific endpoint
+    options.AddPolicy("orders.read", policy =>
+        policy.RequireAuthenticatedUser().RequireAnyScope("resource-b.orders.read"));
+
+    // one endpoint can allow multiple scopes (logical OR)
+    options.AddPolicy("orders.write", policy =>
+        policy.RequireAuthenticatedUser().RequireAnyScope(
+            "resource-b.orders.write",
+            "resource-b.orders.admin"));
+});
+
+var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapGet("/orders", [Authorize(Policy = "orders.read")] () => Results.Ok("read ok"));
+app.MapPost("/orders", [Authorize(Policy = "orders.write")] () => Results.Ok("write ok"));
+```
+
+Notes:
+- `Authority` is optional in this package and defaults to `https://localhost:5100`.
+- `RequireAnyScope(...)` is **OR** logic: if the token has any listed scope, authorization passes.
+- If you need **AND** logic (must have multiple scopes), define a custom policy/handler or chain explicit assertions.
+
 ### 2) Request token from Application A
 
 ```bash
