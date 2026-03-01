@@ -221,6 +221,38 @@ dotnet ef database update \
 
 At runtime, API remains the composition root and continues to apply migrations through `Database.Migrate()` during startup.
 
+## PKCE flow (frontend app -> Auth API/OpenIddict -> Azure AD O365 login)
+
+Auth API now supports OpenIddict authorization code + PKCE for public frontend clients registered in AdminApp (`flow = AuthorizationWithPKCE`).
+
+This repo provides:
+
+- `GET/POST /connect/authorize`
+- `POST /connect/token`
+- `GET/POST /connect/logout`
+
+### How PKCE works in this project
+
+1. Frontend redirects user to `authorize` with `response_type=code`, `code_challenge`, `code_challenge_method=S256`, `client_id`, `redirect_uri`, and scopes.
+2. Auth API checks for local auth cookie.
+3. If user is not signed in, Auth API challenges Azure AD (O365) using configured `AzureAd` settings.
+4. After O365 sign-in, Auth API issues an OpenIddict authorization code back to frontend.
+5. Frontend exchanges code + `code_verifier` at `/connect/token`.
+6. Auth API returns tokens issued by OpenIddict (issuer = `LocalAuth:Issuer`).
+
+### Required configuration for Azure AD login broker
+
+Set these values on API:
+
+```bash
+AzureAd__TenantId=<tenant-id-or-common>
+AzureAd__ClientId=<entra-app-client-id>
+AzureAd__ClientSecret=<entra-app-client-secret-if-required>
+AzureAd__CallbackPath=/signin-oidc
+```
+
+The frontend authority should still point to this Auth API/OpenIddict authority, not Azure directly.
+
 ## Client Credentials flow (Application A -> token -> external resource APIs)
 
 Auth API acts as the token orchestrator. Resource APIs (resource-b/resource-c/resource-d/etc.) are independent services that trust tokens issued by Auth API. Client authentication and token persistence use OpenIddict Redis stores (not the SQL admin CRUD database).
