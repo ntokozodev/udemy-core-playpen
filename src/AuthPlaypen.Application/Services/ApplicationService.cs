@@ -240,12 +240,61 @@ public class ApplicationService(
     {
         if (flow == ApplicationFlow.AuthorizationWithPKCE)
         {
+            var redirectValidationError = ValidateUriList(redirectUris, "RedirectUris", required: true);
+            if (redirectValidationError is not null)
+            {
+                return redirectValidationError;
+            }
+
+            var postLogoutValidationError = ValidateUriList(postLogoutRedirectUris, "PostLogoutRedirectUris", required: true);
+            if (postLogoutValidationError is not null)
+            {
+                return postLogoutValidationError;
+            }
+
             return null;
         }
 
         if (!string.IsNullOrWhiteSpace(redirectUris) || !string.IsNullOrWhiteSpace(postLogoutRedirectUris))
         {
             return "RedirectUris and PostLogoutRedirectUris are only allowed for AuthorizationWithPKCE flow.";
+        }
+
+        return null;
+    }
+
+    private static string? ValidateUriList(string? urisValue, string fieldName, bool required)
+    {
+        if (string.IsNullOrWhiteSpace(urisValue))
+        {
+            return required ? $"{fieldName} is required for AuthorizationWithPKCE flow." : null;
+        }
+
+        var segments = urisValue
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        if (segments.Length == 0)
+        {
+            return required ? $"{fieldName} is required for AuthorizationWithPKCE flow." : null;
+        }
+
+        foreach (var uriValue in segments)
+        {
+            if (!Uri.TryCreate(uriValue, UriKind.Absolute, out var uri))
+            {
+                return $"{fieldName} contains an invalid URI: '{uriValue}'.";
+            }
+
+            var isHttps = string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase);
+            var isLoopbackHttp = string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+                && (uri.IsLoopback || string.Equals(uri.Host, "localhost", StringComparison.OrdinalIgnoreCase));
+
+            if (!isHttps && !isLoopbackHttp)
+            {
+                return $"{fieldName} URI '{uriValue}' must use https (or http for localhost only).";
+            }
         }
 
         return null;

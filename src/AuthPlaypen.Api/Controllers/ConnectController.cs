@@ -22,6 +22,58 @@ public class ConnectController(
         var request = HttpContext.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
 
+        if (string.IsNullOrWhiteSpace(request.ClientId))
+        {
+            return BadRequest(new OpenIddictResponse
+            {
+                Error = OpenIddictConstants.Errors.InvalidRequest,
+                ErrorDescription = "client_id is required."
+            });
+        }
+
+        var application = await applicationManager.FindByClientIdAsync(request.ClientId, cancellationToken);
+        if (application is null)
+        {
+            return BadRequest(new OpenIddictResponse
+            {
+                Error = OpenIddictConstants.Errors.InvalidClient,
+                ErrorDescription = "Client authentication failed."
+            });
+        }
+
+        var permissions = await applicationManager.GetPermissionsAsync(application, cancellationToken);
+        var allowsAuthorizationCode = permissions.Contains(OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode, StringComparer.Ordinal);
+        if (!allowsAuthorizationCode)
+        {
+            return BadRequest(new OpenIddictResponse
+            {
+                Error = OpenIddictConstants.Errors.UnauthorizedClient,
+                ErrorDescription = "This client is not configured for the authorization code flow."
+            });
+        }
+
+        var allowedScopes = permissions
+            .Where(permission => permission.StartsWith(OpenIddictConstants.Permissions.Prefixes.Scope, StringComparison.Ordinal))
+            .Select(permission => permission[OpenIddictConstants.Permissions.Prefixes.Scope.Length..])
+            .Where(scopeName => !string.IsNullOrWhiteSpace(scopeName))
+            .ToHashSet(StringComparer.Ordinal);
+
+        var requestedScopes = request.GetScopes().ToArray();
+        var invalidScopes = requestedScopes
+            .Where(scope => !OpenIddictConstants.Scopes.OfflineAccess.Equals(scope, StringComparison.Ordinal))
+            .Where(scope => !allowedScopes.Contains(scope))
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
+        if (invalidScopes.Length != 0)
+        {
+            return BadRequest(new OpenIddictResponse
+            {
+                Error = OpenIddictConstants.Errors.InvalidScope,
+                ErrorDescription = $"The following scopes are not allowed for this client: {string.Join(", ", invalidScopes)}"
+            });
+        }
+
         var authResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
 
         if (!authResult.Succeeded || authResult.Principal is null)
@@ -80,7 +132,6 @@ public class ConnectController(
             identity.SetClaim(OpenIddictConstants.Claims.Email, email);
         }
 
-        var requestedScopes = request.GetScopes().ToArray();
         identity.SetScopes(requestedScopes);
         var resources = new List<string>();
         await foreach (var resource in scopeManager.ListResourcesAsync(requestedScopes, cancellationToken))
@@ -107,7 +158,7 @@ public class ConnectController(
         var request = HttpContext.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
 
-        if (request.IsAuthorizationCodeGrantType())
+        if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType())
         {
             var authenticateResult = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
 
@@ -116,7 +167,7 @@ public class ConnectController(
                 return BadRequest(new OpenIddictResponse
                 {
                     Error = OpenIddictConstants.Errors.InvalidGrant,
-                    ErrorDescription = "The authorization code is invalid or has expired."
+                    ErrorDescription = "The authorization code or refresh token is invalid or has expired."
                 });
             }
 
@@ -143,7 +194,7 @@ public class ConnectController(
             return BadRequest(new OpenIddictResponse
             {
                 Error = OpenIddictConstants.Errors.UnsupportedGrantType,
-                ErrorDescription = "Only client_credentials and authorization_code grants are supported."
+                ErrorDescription = "Only client_credentials, authorization_code, and refresh_token grants are supported."
             });
         }
 

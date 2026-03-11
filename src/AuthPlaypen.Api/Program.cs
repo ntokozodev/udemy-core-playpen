@@ -154,6 +154,7 @@ builder.Services.AddOpenIddict()
 
         options.AllowClientCredentialsFlow();
         options.AllowAuthorizationCodeFlow();
+        options.AllowRefreshTokenFlow();
         options.RequireProofKeyForCodeExchange();
 
         options.SetIssuer(new Uri(localIssuer));
