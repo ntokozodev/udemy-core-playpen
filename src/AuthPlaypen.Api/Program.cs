@@ -1,5 +1,5 @@
 using System.Security.Cryptography.X509Certificates;
-using AuthPlaypen.Api.OpenIddict.Redis;
+using AuthPlaypen.OpenIddict.Redis;
 using AuthPlaypen.Api.Services;
 using AuthPlaypen.Application.Services;
 using AuthPlaypen.Data.Data;

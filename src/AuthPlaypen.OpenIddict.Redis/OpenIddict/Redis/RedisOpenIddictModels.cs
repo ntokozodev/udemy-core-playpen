@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace AuthPlaypen.Api.OpenIddict.Redis;
+namespace AuthPlaypen.OpenIddict.Redis;
 
 public sealed class RedisOpenIddictApplication
 {

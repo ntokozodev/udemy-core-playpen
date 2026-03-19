@@ -6,7 +6,7 @@ using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using StackExchange.Redis;
 
-namespace AuthPlaypen.Api.OpenIddict.Redis;
+namespace AuthPlaypen.OpenIddict.Redis;
 
 public sealed class RedisOpenIddictApplicationStore(IConnectionMultiplexer multiplexer) : IOpenIddictApplicationStore<RedisOpenIddictApplication>
 {

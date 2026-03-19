@@ -1,7 +1,7 @@
 using System.Text.Json;
 using StackExchange.Redis;
 
-namespace AuthPlaypen.Api.OpenIddict.Redis;
+namespace AuthPlaypen.OpenIddict.Redis;
 
 internal static class RedisOpenIddictKeys
 {

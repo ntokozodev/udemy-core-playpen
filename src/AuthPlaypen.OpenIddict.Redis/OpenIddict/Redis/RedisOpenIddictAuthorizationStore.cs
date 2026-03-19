@@ -3,7 +3,7 @@ using System.Text.Json;
 using OpenIddict.Abstractions;
 using StackExchange.Redis;
 
-namespace AuthPlaypen.Api.OpenIddict.Redis;
+namespace AuthPlaypen.OpenIddict.Redis;
 
 public sealed class RedisOpenIddictAuthorizationStore(IConnectionMultiplexer multiplexer)
     : IOpenIddictAuthorizationStore<RedisOpenIddictAuthorization>

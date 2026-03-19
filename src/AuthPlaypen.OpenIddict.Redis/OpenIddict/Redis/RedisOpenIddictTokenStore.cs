@@ -2,7 +2,7 @@ using System.Collections.Immutable;
 using OpenIddict.Abstractions;
 using StackExchange.Redis;
 
-namespace AuthPlaypen.Api.OpenIddict.Redis;
+namespace AuthPlaypen.OpenIddict.Redis;
 
 public sealed class RedisOpenIddictTokenStore(IConnectionMultiplexer multiplexer) : IOpenIddictTokenStore<RedisOpenIddictToken>
 {
