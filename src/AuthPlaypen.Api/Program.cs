@@ -1,10 +1,10 @@
-using AuthPlaypen.Api.OpenIddict.Redis;
+using System.Security.Cryptography.X509Certificates;
 using AuthPlaypen.Api.Services;
 using AuthPlaypen.Application.Services;
 using AuthPlaypen.Data.Data;
+using AuthPlaypen.OpenIddict.Redis;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +12,7 @@ using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using OpenIddict.Abstractions;
+using OpenIddict.Server;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -74,41 +75,19 @@ var enableIntrospectionEndpoint = bool.TryParse(builder.Configuration["LocalAuth
 
 var tenantId = builder.Configuration["AzureAd:TenantId"];
 var audience = builder.Configuration["AzureAd:Audience"];
-var azureAdClientId = builder.Configuration["AzureAd:ClientId"];
-var azureAdClientSecret = builder.Configuration["AzureAd:ClientSecret"];
-var azureAdCallbackPath = builder.Configuration["AzureAd:CallbackPath"] ?? "/signin-oidc";
-var azureAdAuthority = !string.IsNullOrWhiteSpace(tenantId)
-    ? $"https://login.microsoftonline.com/{tenantId}/v2.0"
-    : null;
-var authConfigured = !string.IsNullOrWhiteSpace(tenantId) && !string.IsNullOrWhiteSpace(audience);
+var azureClientId = builder.Configuration["AzureAd:ClientId"];
+var azureClientSecret = builder.Configuration["AzureAd:ClientSecret"];
+var azureCallbackPath = builder.Configuration["AzureAd:CallbackPath"] ?? "/signin-oidc";
 
-var authenticationBuilder = builder.Services.AddAuthentication();
+var jwtValidationConfigured = !string.IsNullOrWhiteSpace(tenantId) && !string.IsNullOrWhiteSpace(audience);
+var externalOidcConfigured = !string.IsNullOrWhiteSpace(tenantId) && !string.IsNullOrWhiteSpace(azureClientId) && !string.IsNullOrWhiteSpace(azureClientSecret);
+var enableIntrospectionEndpoint = bool.TryParse(builder.Configuration["LocalAuth:EnableIntrospectionEndpoint"], out var enabledIntrospection) ? enabledIntrospection : true;
 
-if (!string.IsNullOrWhiteSpace(azureAdAuthority) && !string.IsNullOrWhiteSpace(azureAdClientId))
+var authenticationBuilder = builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
+
+if (jwtValidationConfigured)
 {
-    authenticationBuilder
-        .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme)
-        .AddOpenIdConnect("AzureAd", options =>
-        {
-            options.Authority = azureAdAuthority;
-            options.ClientId = azureAdClientId;
-            options.ClientSecret = azureAdClientSecret;
-            options.CallbackPath = azureAdCallbackPath;
-            options.ResponseType = OpenIdConnectResponseType.Code;
-            options.UsePkce = true;
-            options.SaveTokens = true;
-            options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-
-            options.Scope.Clear();
-            options.Scope.Add(OpenIddictConstants.Scopes.OpenId);
-            options.Scope.Add(OpenIddictConstants.Scopes.Profile);
-            options.Scope.Add(OpenIddictConstants.Scopes.Email);
-        });
-}
-
-if (authConfigured)
-{
-    authenticationBuilder.AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    authenticationBuilder.AddJwtBearer(options =>
     {
         options.Authority = $"https://login.microsoftonline.com/{tenantId}/v2.0";
         options.Audience = audience;
@@ -122,67 +101,79 @@ if (authConfigured)
     });
 }
 
-builder.Services.AddAuthorization();
+if (externalOidcConfigured)
+{
+    authenticationBuilder
+        .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme)
+        .AddOpenIdConnect("AzureAdOidc", options =>
+        {
+            options.Authority = $"https://login.microsoftonline.com/{tenantId}/v2.0";
+            options.ClientId = azureClientId;
+            options.ClientSecret = azureClientSecret;
+            options.CallbackPath = azureCallbackPath;
+            options.ResponseType = "code";
+            options.SaveTokens = true;
+            options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            options.GetClaimsFromUserInfoEndpoint = true;
+            options.Scope.Clear();
+            options.Scope.Add("openid");
+            options.Scope.Add("profile");
+            options.Scope.Add("email");
+        });
+}
 
+builder.Services.AddAuthorization();
 
 var redisConnectionString = builder.Configuration.GetConnectionString("Redis")
     ?? "localhost:6379";
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
 
-builder.Services.AddOpenIddict()
+var openIddictBuilder = builder.Services.AddOpenIddict();
+
+openIddictBuilder
     .AddCore(options =>
     {
         options.SetDefaultApplicationEntity<RedisOpenIddictApplication>();
+        options.SetDefaultAuthorizationEntity<RedisOpenIddictAuthorization>();
         options.SetDefaultScopeEntity<RedisOpenIddictScope>();
         options.SetDefaultTokenEntity<RedisOpenIddictToken>();
 
         options.Services.AddSingleton<IOpenIddictApplicationStore<RedisOpenIddictApplication>, RedisOpenIddictApplicationStore>();
+        options.Services.AddSingleton<IOpenIddictAuthorizationStore<RedisOpenIddictAuthorization>, RedisOpenIddictAuthorizationStore>();
         options.Services.AddSingleton<IOpenIddictScopeStore<RedisOpenIddictScope>, RedisOpenIddictScopeStore>();
         options.Services.AddSingleton<IOpenIddictTokenStore<RedisOpenIddictToken>, RedisOpenIddictTokenStore>();
     })
     .AddServer(options =>
     {
-        options.SetAuthorizationEndpointUris("/connect/authorize");
-        options.SetTokenEndpointUris("/connect/token");
-        options.SetLogoutEndpointUris("/connect/logout");
-        options.SetConfigurationEndpointUris("/.well-known/openid-configuration");
-        options.SetJsonWebKeySetEndpointUris("/.well-known/jwks");
-        if (enableIntrospectionEndpoint)
+        var issuer = builder.Configuration["OpenIddictSigningOptions:Issuer"];
+        if (!string.IsNullOrWhiteSpace(issuer))
         {
-            options.SetIntrospectionEndpointUris("/connect/introspect");
+            options.SetIssuer(new Uri(issuer, UriKind.Absolute));
         }
 
-        options.AllowClientCredentialsFlow();
-        options.AllowAuthorizationCodeFlow();
-        options.RequireProofKeyForCodeExchange();
-
-        options.SetIssuer(new Uri(localIssuer));
-        options.AddAudiences(localAudience);
-        options.SetAccessTokenLifetime(TimeSpan.FromSeconds(accessTokenLifetimeSeconds));
-
-        var signingKeyBytes = System.Text.Encoding.UTF8.GetBytes(localSigningKey);
-        if (signingKeyBytes.Length < 32)
-        {
-            throw new InvalidOperationException("LocalAuth:SigningKey must be at least 32 bytes.");
-        }
-
-        var signingKey = new SymmetricSecurityKey(signingKeyBytes)
-        {
-            KeyId = Convert.ToHexString(SHA256.HashData(signingKeyBytes))
-        };
-
-        options.AddSigningKey(signingKey);
-
-        var aspNetCore = options.UseAspNetCore();
-        aspNetCore.EnableAuthorizationEndpointPassthrough();
-        aspNetCore.EnableTokenEndpointPassthrough();
-        aspNetCore.EnableLogoutEndpointPassthrough();
+        options.SetAuthorizationEndpointUris("connect/authorize")
+            .SetTokenEndpointUris("connect/token")
+            .SetRevocationEndpointUris("connect/revoke")
+            .SetEndSessionEndpointUris("connect/logout")
+            .SetUserInfoEndpointUris("connect/userinfo");
 
         if (enableIntrospectionEndpoint)
         {
-            aspNetCore.EnableIntrospectionEndpointPassthrough();
+            options.SetIntrospectionEndpointUris("connect/introspect");
         }
+
+        options.AllowAuthorizationCodeFlow()
+            .AllowClientCredentialsFlow()
+            .RequireProofKeyForCodeExchange();
+
+        options.RegisterScopes(OpenIddictConstants.Scopes.OpenId, OpenIddictConstants.Scopes.Profile, OpenIddictConstants.Scopes.OfflineAccess);
+
+        ConfigureSigningCertificate(options, builder.Configuration);
+
+        options.UseAspNetCore()
+            .EnableAuthorizationEndpointPassthrough()
+            .EnableEndSessionEndpointPassthrough();
     });
 
 builder.Services.AddDbContext<AuthPlaypenDbContext>(options =>
@@ -233,9 +224,12 @@ app.UseHttpsRedirection();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-app.UseAuthentication();
-app.UseAuthorization();
+if (jwtValidationConfigured || externalOidcConfigured)
+{
+    app.UseAuthentication();
+}
 
+app.UseAuthorization();
 
 app.MapGet("/app-config", (IConfiguration config, IWebHostEnvironment environment) =>
 {
@@ -251,9 +245,9 @@ app.MapGet("/app-config", (IConfiguration config, IWebHostEnvironment environmen
     if (useLocalMockDefaults)
     {
         authority = "https://localhost:5100";
-        clientId = "gatekeeper-web-admin";
-        redirectPath = "/admin/auth/callback";
-        postLogoutRedirectPath = "/admin/auth/logout-callback";
+        clientId = "authkeeper-web-admin";
+        redirectPath = "/auth/callback";
+        postLogoutRedirectPath = "/";
     }
 
     return Results.Ok(new
@@ -271,3 +265,28 @@ app.MapFallbackToFile("/admin/{*path:nonfile}", "admin/index.html");
 app.MapControllers();
 
 app.Run();
+
+static void ConfigureSigningCertificate(OpenIddictServerBuilder options, IConfiguration configuration)
+{
+    var certPath = configuration["OpenIddictSigningOptions:SigningCertificatePath"];
+    var certPassword = configuration["OpenIddictSigningOptions:SigningCertificatePassword"];
+
+    if (!string.IsNullOrWhiteSpace(certPath))
+    {
+        if (!Path.IsPathRooted(certPath))
+        {
+            certPath = Path.Combine(AppContext.BaseDirectory, certPath);
+        }
+
+        if (!File.Exists(certPath))
+        {
+            throw new InvalidOperationException($"OpenIddict signing certificate file not found: {certPath}");
+        }
+
+        var certificate = new X509Certificate2(certPath, certPassword);
+        options.AddSigningCertificate(certificate);
+        return;
+    }
+
+    options.AddDevelopmentSigningCertificate();
+}

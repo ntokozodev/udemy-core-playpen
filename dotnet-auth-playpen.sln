@@ -10,7 +10,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthPlaypen.Data", "src\Aut
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthPlaypen.Domain", "src\AuthPlaypen.Domain\AuthPlaypen.Domain.csproj", "{500F03AC-3632-45F8-AC05-FAB4E22F2D17}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthPlaypen.ResourceApiAuth", "src\AuthPlaypen.ResourceApiAuth\AuthPlaypen.ResourceApiAuth.csproj", "{A0E4E556-8B8A-420D-BA34-51D9BBCC2B57}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthPlaypen.OpenIddict.Redis", "src\AuthPlaypen.OpenIddict.Redis\AuthPlaypen.OpenIddict.Redis.csproj", "{44CC7C1A-3BA9-4BD8-B2A0-911BC94DD93E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,10 +34,10 @@ Global
 		{500F03AC-3632-45F8-AC05-FAB4E22F2D17}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{500F03AC-3632-45F8-AC05-FAB4E22F2D17}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{500F03AC-3632-45F8-AC05-FAB4E22F2D17}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A0E4E556-8B8A-420D-BA34-51D9BBCC2B57}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A0E4E556-8B8A-420D-BA34-51D9BBCC2B57}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A0E4E556-8B8A-420D-BA34-51D9BBCC2B57}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A0E4E556-8B8A-420D-BA34-51D9BBCC2B57}.Release|Any CPU.Build.0 = Release|Any CPU
+		{44CC7C1A-3BA9-4BD8-B2A0-911BC94DD93E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{44CC7C1A-3BA9-4BD8-B2A0-911BC94DD93E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{44CC7C1A-3BA9-4BD8-B2A0-911BC94DD93E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{44CC7C1A-3BA9-4BD8-B2A0-911BC94DD93E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
