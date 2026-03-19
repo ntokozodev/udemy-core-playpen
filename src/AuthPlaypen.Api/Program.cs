@@ -1,3 +1,5 @@
+using System.Security.Cryptography.X509Certificates;
+using AuthPlaypen.Api.OpenIddict.Redis;
 using AuthPlaypen.Api.Services;
 using AuthPlaypen.Application.Services;
 using AuthPlaypen.Data.Data;
@@ -5,6 +7,9 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using OpenIddict.Abstractions;
+using OpenIddict.Server;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,6 +82,52 @@ if (authConfigured)
 
 builder.Services.AddAuthorization();
 
+var redisConnectionString = builder.Configuration.GetConnectionString("Redis")
+    ?? "localhost:6379";
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
+
+var openIddictBuilder = builder.Services.AddOpenIddict();
+
+openIddictBuilder
+    .AddCore(options =>
+    {
+        options.SetDefaultApplicationEntity<RedisOpenIddictApplication>();
+        options.SetDefaultAuthorizationEntity<RedisOpenIddictAuthorization>();
+        options.SetDefaultScopeEntity<RedisOpenIddictScope>();
+        options.SetDefaultTokenEntity<RedisOpenIddictToken>();
+
+        options.Services.AddSingleton<IOpenIddictApplicationStore<RedisOpenIddictApplication>, RedisOpenIddictApplicationStore>();
+        options.Services.AddSingleton<IOpenIddictAuthorizationStore<RedisOpenIddictAuthorization>, RedisOpenIddictAuthorizationStore>();
+        options.Services.AddSingleton<IOpenIddictScopeStore<RedisOpenIddictScope>, RedisOpenIddictScopeStore>();
+        options.Services.AddSingleton<IOpenIddictTokenStore<RedisOpenIddictToken>, RedisOpenIddictTokenStore>();
+    })
+    .AddServer(options =>
+    {
+        var issuer = builder.Configuration["OpenIddictSigningOptions:Issuer"];
+        if (!string.IsNullOrWhiteSpace(issuer))
+        {
+            options.SetIssuer(new Uri(issuer, UriKind.Absolute));
+        }
+
+        options.SetAuthorizationEndpointUris("connect/authorize")
+            .SetTokenEndpointUris("connect/token")
+            .SetIntrospectionEndpointUris("connect/introspect")
+            .SetRevocationEndpointUris("connect/revoke")
+            .SetEndSessionEndpointUris("connect/logout")
+            .SetUserInfoEndpointUris("connect/userinfo");
+
+        options.AllowAuthorizationCodeFlow()
+            .AllowClientCredentialsFlow()
+            .RequireProofKeyForCodeExchange();
+
+        options.RegisterScopes(OpenIddictConstants.Scopes.OpenId, OpenIddictConstants.Scopes.Profile, OpenIddictConstants.Scopes.OfflineAccess);
+
+        ConfigureSigningCertificate(options, builder.Configuration);
+
+        options.UseAspNetCore();
+    });
+
 builder.Services.AddDbContext<AuthPlaypenDbContext>(options =>
 {
     var connectionString = builder.Configuration.GetConnectionString("Postgres")
@@ -132,7 +183,6 @@ if (authConfigured)
 
 app.UseAuthorization();
 
-
 app.MapGet("/app-config", (IConfiguration config, IWebHostEnvironment environment) =>
 {
     var useMockData = config["AdminApp:UseMockData"];
@@ -147,7 +197,7 @@ app.MapGet("/app-config", (IConfiguration config, IWebHostEnvironment environmen
     if (useLocalMockDefaults)
     {
         authority = "https://localhost:5100";
-        clientId = "gatekeeper-web-admin";
+        clientId = "authkeeper-web-admin";
         redirectPath = "/auth/callback";
         postLogoutRedirectPath = "/";
     }
@@ -167,3 +217,28 @@ app.MapFallbackToFile("/admin/{*path:nonfile}", "admin/index.html");
 app.MapControllers();
 
 app.Run();
+
+static void ConfigureSigningCertificate(OpenIddictServerBuilder options, IConfiguration configuration)
+{
+    var certPath = configuration["OpenIddictSigningOptions:SigningCertificatePath"];
+    var certPassword = configuration["OpenIddictSigningOptions:SigningCertificatePassword"];
+
+    if (!string.IsNullOrWhiteSpace(certPath))
+    {
+        if (!Path.IsPathRooted(certPath))
+        {
+            certPath = Path.Combine(AppContext.BaseDirectory, certPath);
+        }
+
+        if (!File.Exists(certPath))
+        {
+            throw new InvalidOperationException($"OpenIddict signing certificate file not found: {certPath}");
+        }
+
+        var certificate = new X509Certificate2(certPath, certPassword);
+        options.AddSigningCertificate(certificate);
+        return;
+    }
+
+    options.AddDevelopmentSigningCertificate();
+}

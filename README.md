@@ -89,7 +89,7 @@ app.MapGet("/app-config", (IConfiguration config, IWebHostEnvironment environmen
     if (useLocalMockDefaults)
     {
         authority = "https://localhost:5100";
-        clientId = "gatekeeper-web-admin";
+        clientId = "authkeeper-web-admin";
         redirectPath = "/auth/callback";
         postLogoutRedirectPath = "/";
     }
@@ -114,7 +114,7 @@ Set environment variables for the API process (systemd/container/app service), f
 AdminApp__UseMockData=false
 AdminApp__Oidc__EnableAuth=true
 AdminApp__Oidc__Authority=https://login.qa.example.com
-AdminApp__Oidc__ClientId=gatekeeper-web-admin
+AdminApp__Oidc__ClientId=authkeeper-web-admin
 AdminApp__Oidc__RedirectPath=/auth/callback
 AdminApp__Oidc__PostLogoutRedirectPath=/
 ```
@@ -131,7 +131,7 @@ Local defaults are now defined in `src/AuthPlaypen.Api/appsettings.Development.j
   "Oidc": {
     "EnableAuth": "false",
     "Authority": "https://localhost:5100",
-    "ClientId": "gatekeeper-web-admin",
+    "ClientId": "authkeeper-web-admin",
     "RedirectPath": "/auth/callback",
     "PostLogoutRedirectPath": "/"
   }
@@ -142,6 +142,39 @@ The `/app-config` endpoint reads these values in Development, so local mock mode
 
 `UseMockData=true` only switches admin CRUD/data requests to the in-memory mock API. It does not bypass runtime config loading.
 
+
+
+## OpenIddict v7 + Redis storage
+
+The API is wired to OpenIddict Core v7 using custom Redis-backed stores for:
+
+- Applications (`IOpenIddictApplicationStore`)
+- Scopes (`IOpenIddictScopeStore`)
+- Tokens (`IOpenIddictTokenStore`)
+
+Admin CRUD remains in PostgreSQL. After admin writes, the application services call sync services that upsert/delete OpenIddict entities in Redis.
+
+Configuration:
+
+- `ConnectionStrings:Postgres` for admin data
+- `ConnectionStrings:Redis` for OpenIddict stores (default `localhost:6379`)
+- `OpenIddictSigningOptions:Issuer` for issuer URI
+- `OpenIddictSigningOptions:SigningCertificatePath`/`SigningCertificatePassword` for production signing cert
+
+The API also configures `AddServer(...)` with the standard OpenID Connect endpoints:
+
+- `/connect/authorize`
+- `/connect/token`
+- `/connect/logout`
+- `/connect/userinfo`
+- `/connect/introspect`
+- `/connect/revoke`
+
+Supported grant types include Authorization Code + PKCE and Client Credentials.
+
+For resource APIs that require near real-time revocation checks, use `/connect/introspect` to validate token activity/status before granting access. `/connect/revoke` is available to invalidate issued tokens/authorizations.
+
+Signing credentials are loaded from `OpenIddictSigningOptions:SigningCertificatePath` when provided; otherwise a development signing certificate is used.
 
 ## API contracts
 
