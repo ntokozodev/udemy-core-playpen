@@ -120,6 +120,10 @@ AdminApp__Oidc__Authority=https://login.qa.example.com
 AdminApp__Oidc__ClientId=authkeeper-web-admin
 AdminApp__Oidc__RedirectPath=/auth/callback
 AdminApp__Oidc__PostLogoutRedirectPath=/
+AzureAd__TenantId=<tenant-guid-or-common>
+AzureAd__ClientId=<azure-app-client-id>
+AzureAd__ClientSecret=<azure-app-client-secret>
+AzureAd__CallbackPath=/signin-oidc
 ```
 
 Use API environment variables (`AdminApp__...`) for QA/Staging/Live instead of frontend `VITE_...` values. `VITE_*` variables are build-time and become fixed in the bundled assets, while `/app-config` keeps config runtime-driven per environment.
@@ -163,6 +167,8 @@ Configuration:
 - `ConnectionStrings:Redis` for OpenIddict stores (default `localhost:6379`)
 - `OpenIddictSigningOptions:Issuer` for issuer URI
 - `OpenIddictSigningOptions:SigningCertificatePath`/`SigningCertificatePassword` for production signing cert
+- `AzureAd:ClientId`/`AzureAd:ClientSecret`/`AzureAd:CallbackPath` for O365 interactive login bridge
+- `LocalAuth:EnableIntrospectionEndpoint` to control whether resource APIs should call introspection for fresh revocation checks
 
 The API also configures `AddServer(...)` with the standard OpenID Connect endpoints:
 
@@ -174,6 +180,8 @@ The API also configures `AddServer(...)` with the standard OpenID Connect endpoi
 - `/connect/revoke`
 
 Supported grant types include Authorization Code + PKCE and Client Credentials.
+
+Interactive Authorization Code + PKCE sign-in is wired to Azure AD/O365 as the upstream identity provider when `AzureAd:ClientId` and `AzureAd:ClientSecret` are configured.
 
 For resource APIs that require near real-time revocation checks, use `/connect/introspect` to validate token activity/status before granting access. `/connect/revoke` is available to invalidate issued tokens/authorizations.
 

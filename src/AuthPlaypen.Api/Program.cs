@@ -1,9 +1,12 @@
 using System.Security.Cryptography.X509Certificates;
-using AuthPlaypen.OpenIddict.Redis;
 using AuthPlaypen.Api.Services;
 using AuthPlaypen.Application.Services;
 using AuthPlaypen.Data.Data;
+using AuthPlaypen.OpenIddict.Redis;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -61,12 +64,19 @@ builder.Services.AddSwaggerGen(options =>
 
 var tenantId = builder.Configuration["AzureAd:TenantId"];
 var audience = builder.Configuration["AzureAd:Audience"];
-var authConfigured = !string.IsNullOrWhiteSpace(tenantId) && !string.IsNullOrWhiteSpace(audience);
+var azureClientId = builder.Configuration["AzureAd:ClientId"];
+var azureClientSecret = builder.Configuration["AzureAd:ClientSecret"];
+var azureCallbackPath = builder.Configuration["AzureAd:CallbackPath"] ?? "/signin-oidc";
 
-if (authConfigured)
+var jwtValidationConfigured = !string.IsNullOrWhiteSpace(tenantId) && !string.IsNullOrWhiteSpace(audience);
+var externalOidcConfigured = !string.IsNullOrWhiteSpace(tenantId) && !string.IsNullOrWhiteSpace(azureClientId) && !string.IsNullOrWhiteSpace(azureClientSecret);
+var enableIntrospectionEndpoint = bool.TryParse(builder.Configuration["LocalAuth:EnableIntrospectionEndpoint"], out var enabledIntrospection) ? enabledIntrospection : true;
+
+var authenticationBuilder = builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme);
+
+if (jwtValidationConfigured)
 {
-    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
+    authenticationBuilder.AddJwtBearer(options =>
     {
         options.Authority = $"https://login.microsoftonline.com/{tenantId}/v2.0";
         options.Audience = audience;
@@ -78,6 +88,27 @@ if (authConfigured)
             ValidAudience = audience
         };
     });
+}
+
+if (externalOidcConfigured)
+{
+    authenticationBuilder
+        .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme)
+        .AddOpenIdConnect("AzureAdOidc", options =>
+        {
+            options.Authority = $"https://login.microsoftonline.com/{tenantId}/v2.0";
+            options.ClientId = azureClientId;
+            options.ClientSecret = azureClientSecret;
+            options.CallbackPath = azureCallbackPath;
+            options.ResponseType = "code";
+            options.SaveTokens = true;
+            options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            options.GetClaimsFromUserInfoEndpoint = true;
+            options.Scope.Clear();
+            options.Scope.Add("openid");
+            options.Scope.Add("profile");
+            options.Scope.Add("email");
+        });
 }
 
 builder.Services.AddAuthorization();
@@ -112,10 +143,14 @@ openIddictBuilder
 
         options.SetAuthorizationEndpointUris("connect/authorize")
             .SetTokenEndpointUris("connect/token")
-            .SetIntrospectionEndpointUris("connect/introspect")
             .SetRevocationEndpointUris("connect/revoke")
             .SetEndSessionEndpointUris("connect/logout")
             .SetUserInfoEndpointUris("connect/userinfo");
+
+        if (enableIntrospectionEndpoint)
+        {
+            options.SetIntrospectionEndpointUris("connect/introspect");
+        }
 
         options.AllowAuthorizationCodeFlow()
             .AllowClientCredentialsFlow()
@@ -125,7 +160,9 @@ openIddictBuilder
 
         ConfigureSigningCertificate(options, builder.Configuration);
 
-        options.UseAspNetCore();
+        options.UseAspNetCore()
+            .EnableAuthorizationEndpointPassthrough()
+            .EnableEndSessionEndpointPassthrough();
     });
 
 builder.Services.AddDbContext<AuthPlaypenDbContext>(options =>
@@ -176,7 +213,7 @@ app.UseHttpsRedirection();
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
-if (authConfigured)
+if (jwtValidationConfigured || externalOidcConfigured)
 {
     app.UseAuthentication();
 }
