@@ -58,6 +58,7 @@ The admin frontend includes an `oidc-client-ts` based auth flow that is intentio
 - Set `VITE_ENABLE_OIDC_AUTH=true` to require authentication for admin routes.
 - Callback route is `/admin/auth/callback`.
 - Unauthenticated users are redirected to API/OpenIddict with PKCE (`response_type=code`).
+- OpenIddict server exposes both `/connect/authorize` and `/connect/token` for authorization code + PKCE flow.
 - OIDC scope is intentionally fixed in frontend (`openid profile`) and treated as API/OpenIddict contract, not a per-frontend env setting.
 - Frontend OIDC user state is stored in `sessionStorage` (not `localStorage`).
 - The admin app should point to **API/OpenIddict authority only** and should not target Azure directly.
@@ -248,3 +249,208 @@ dotnet ef database update \
 ```
 
 At runtime, API remains the composition root and continues to apply migrations through `Database.Migrate()` during startup.
+
+## PKCE flow (frontend app -> Auth API/OpenIddict -> Azure AD O365 login)
+
+Auth API now supports OpenIddict authorization code + PKCE for public frontend clients registered in AdminApp (`flow = AuthorizationWithPKCE`).
+
+This repo provides:
+
+- `GET/POST /connect/authorize`
+- `POST /connect/token`
+- `GET/POST /connect/logout`
+
+### How PKCE works in this project
+
+1. Frontend redirects user to `authorize` with `response_type=code`, `code_challenge`, `code_challenge_method=S256`, `client_id`, `redirect_uri`, and scopes.
+2. Auth API checks for local auth cookie.
+3. If user is not signed in, Auth API challenges Azure AD (O365) using configured `AzureAd` settings.
+4. After O365 sign-in, Auth API issues an OpenIddict authorization code back to frontend.
+5. Frontend exchanges code + `code_verifier` at `/connect/token`.
+6. Auth API returns tokens issued by OpenIddict (issuer = `LocalAuth:Issuer`).
+
+### Required configuration for Azure AD login broker
+
+Set these values on API:
+
+```bash
+AzureAd__TenantId=<tenant-id-or-common>
+AzureAd__ClientId=<entra-app-client-id>
+AzureAd__ClientSecret=<entra-app-client-secret-if-required>
+AzureAd__CallbackPath=/signin-oidc
+```
+
+The frontend authority should still point to this Auth API/OpenIddict authority, not Azure directly.
+
+## Client Credentials flow (Application A -> token -> external resource APIs)
+
+Auth API acts as the token orchestrator. Resource APIs (resource-b/resource-c/resource-d/etc.) are independent services that trust tokens issued by Auth API. Client authentication and token persistence use OpenIddict Redis stores (not the SQL admin CRUD database).
+
+This repo provides:
+
+- `POST /connect/token` (client credentials grant)
+
+### 1) Register scopes and clients
+
+In AdminApp:
+
+- Register resource API scopes (for example: `resource-b.read`, `resource-c.write`, `resource-d.read`).
+- Create **Application A** with flow `ClientCredentials`.
+- Assign the scopes Application A is allowed to use.
+
+> Important: scopes are assigned in AdminApp and synchronized to OpenIddict application permissions. Token requests do not need a `scope` parameter, and `/connect/token` resolves scopes from OpenIddict stores.
+
+### Token validation model for resource APIs
+
+Resource APIs should **not** know or store Application A's client secret. They only validate bearer tokens and enforce required scopes/claims.
+
+In this architecture, signing keys are provided like this:
+
+- Auth API keeps the **private signing key** internally and never shares it with resource APIs.
+- Resource APIs download **public keys** from Auth API discovery metadata (`/.well-known/openid-configuration`) and the referenced `jwks_uri`.
+- In this project's local setup, discovery is served by Auth API at `https://localhost:5100/.well-known/openid-configuration` (same host as `/connect/token`, not under `/api`).
+- JWT middleware caches metadata/JWKS automatically, so high-traffic APIs can validate tokens locally (signature, issuer, audience, expiry, scopes) without calling introspection on every request.
+- When Auth API rotates keys, resource APIs refresh JWKS and continue validating with the new public keys.
+
+Example resource API setup (local JWT validation):
+
+```csharp
+services.AddAuthentication("Bearer")
+    .AddJwtBearer("Bearer", options =>
+    {
+        options.Authority = "https://auth-api.example.com";
+        options.Audience = "resource-b";
+        options.RequireHttpsMetadata = true;
+    });
+```
+
+Introspection remains optional:
+
+- Use local JWT validation by default for performance and independence from Auth API at request time.
+- Add introspection only for APIs that require near-real-time revocation checks.
+
+### Reusable package for resource APIs
+
+Yes. A shared NuGet package is a good fit and can expose a single extension method (for example `AddAuthApiJwtValidation(...)`) that:
+
+- Configures JWT bearer validation (`Authority`, `Audience`, issuer validation, lifetime validation).
+- Validates required scopes consistently (policy helpers/authorization handlers).
+- Uses OpenID Connect discovery + JWKS retrieval/caching for local verification at scale.
+- Optionally enables introspection as a feature flag for services that need active-token checks.
+
+This keeps each resource API lightweight while centralizing the token validation contract with Auth API.
+
+### Implemented in this repository
+
+#### Auth API discovery/JWKS/introspection endpoints
+
+`AuthPlaypen.Api` now explicitly exposes OpenID metadata/JWKS endpoints and optional introspection:
+
+- `/.well-known/openid-configuration`
+- `/.well-known/jwks`
+- `/connect/token`
+- `/connect/introspect` (only when `LocalAuth:EnableIntrospectionEndpoint=true`)
+
+#### Reusable NuGet package (resource APIs)
+
+A reusable package project was added at `src/AuthPlaypen.ResourceApiAuth`.
+
+- Package ID: `AuthPlaypen.ResourceApiAuth`
+- Main extension: `services.AddAuthApiResourceAuthentication(...)`
+- Validation mode switch: `AuthApiTokenValidationMode.Jwt` (default) or `AuthApiTokenValidationMode.Introspection`
+- Scope policy helper: `RequireAnyScope(...)`
+
+Example usage in a resource API (registration + runtime enforcement):
+
+```csharp
+using AuthPlaypen.ResourceApiAuth;
+using Microsoft.AspNetCore.Authorization;
+
+builder.Services.AddAuthApiResourceAuthentication(options =>
+{
+    // optional: defaults to https://localhost:5100
+    // options.Authority = "https://localhost:5100";
+    options.Audience = "resource-b";
+    options.ValidationMode = AuthApiTokenValidationMode.Jwt; // or Introspection
+
+    // required when ValidationMode = Introspection
+    options.IntrospectionClientId = "resource-b-introspection";
+    options.IntrospectionClientSecret = "change-me";
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    // exact scope requirement for a specific endpoint
+    options.AddPolicy("orders.read", policy =>
+        policy.RequireAuthenticatedUser().RequireAnyScope("resource-b.orders.read"));
+
+    // one endpoint can allow multiple scopes (logical OR)
+    options.AddPolicy("orders.write", policy =>
+        policy.RequireAuthenticatedUser().RequireAnyScope(
+            "resource-b.orders.write",
+            "resource-b.orders.admin"));
+});
+
+var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapGet("/orders", [Authorize(Policy = "orders.read")] () => Results.Ok("read ok"));
+app.MapPost("/orders", [Authorize(Policy = "orders.write")] () => Results.Ok("write ok"));
+```
+
+Notes:
+- `Authority` is optional in this package and defaults to `https://localhost:5100`.
+- `RequireAnyScope(...)` is **OR** logic: if the token has any listed scope, authorization passes.
+- If you need **AND** logic (must have multiple scopes), define a custom policy/handler or chain explicit assertions.
+
+### 2) Request token from Application A
+
+```bash
+curl -X POST "http://localhost:8080/connect/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "client_id=<application-a-client-id>" \
+  -d "client_secret=<application-a-client-secret>"
+```
+
+Response contains:
+
+- `access_token`
+- `token_type` (`Bearer`)
+- `expires_in`
+- `scope` (all scopes assigned to the client)
+
+### 3) Call any external resource API with bearer token
+
+```bash
+curl "https://resource-b.example.com/api/orders" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+### OpenIddict idiomatic token endpoint notes
+
+`POST /connect/token` is implemented as an OpenIddict server passthrough endpoint:
+
+- OpenIddict server is configured with `AllowClientCredentialsFlow()` and token endpoint URI `/connect/token`.
+- Controller reads `HttpContext.GetOpenIddictServerRequest()` and returns `SignIn(..., OpenIddictServerAspNetCoreDefaults.AuthenticationScheme)`.
+- Client and scope permissions are resolved from OpenIddict application permissions synced by AdminApp.
+
+This keeps behavior close to OpenIddict defaults while still allowing custom checks when needed.
+
+### How each external API validates token from Application A
+
+When `Application A` uses its own `client_id/client_secret`, it authenticates to Auth API (token issuer). The resulting JWT is then sent to resource APIs.
+
+Each resource API validates the JWT by checking:
+
+> A scope-authorization middleware on each resource API is a good place to enforce that token scopes are allowed for that client/application.
+
+
+1. **Signature** using the issuer signing key.
+2. **Issuer** (`iss`) matches trusted Auth API issuer.
+3. **Audience** (`aud`) matches expected audience.
+4. **Expiry** (`exp`) and token lifetime claims.
+5. **Scope claims** contain the permission(s) that API endpoint requires.
+
+So resource APIs never need Application A's secret. They only trust the token issuer and enforce their own required scopes.

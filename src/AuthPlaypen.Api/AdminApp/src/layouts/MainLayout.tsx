@@ -1,5 +1,7 @@
 import { A } from "@solidjs/router";
-import { createSignal } from "solid-js";
+import { Show, createSignal } from "solid-js";
+import { isOidcAuthEnabled } from "@/services/authConfig";
+import { signOut } from "@/services/authService";
 
 export function MainLayout(props: { children: unknown }) {
   const [collapsed, setCollapsed] = createSignal(false);
@@ -14,6 +16,15 @@ export function MainLayout(props: { children: unknown }) {
           <A class="rounded px-3 py-2 hover:bg-slate-700" href="/">Home</A>
           <A class="rounded px-3 py-2 hover:bg-slate-700" href="/applications">Applications</A>
           <A class="rounded px-3 py-2 hover:bg-slate-700" href="/scopes">Scopes</A>
+          <Show when={isOidcAuthEnabled}>
+            <button
+              class="rounded px-3 py-2 text-left text-red-200 hover:bg-slate-700 hover:text-red-100"
+              onClick={() => void signOut()}
+              type="button"
+            >
+              Sign out
+            </button>
+          </Show>
         </nav>
       </aside>
       <main class="flex-1 bg-slate-50 p-6">

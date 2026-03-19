@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using OpenIddict.Abstractions;
@@ -61,6 +62,16 @@ builder.Services.AddSwaggerGen(options =>
         });
     }
 });
+
+var localIssuer = builder.Configuration["LocalAuth:Issuer"] ?? "https://authplaypen.local";
+var localAudience = builder.Configuration["LocalAuth:Audience"] ?? "authplaypen-resource-apis";
+var localSigningKey = builder.Configuration["LocalAuth:SigningKey"] ?? "dev-local-signing-key-change-me-1234567890";
+var accessTokenLifetimeSeconds = int.TryParse(builder.Configuration["LocalAuth:AccessTokenLifetimeSeconds"], out var parsedTokenLifetime)
+    ? parsedTokenLifetime
+    : 3600;
+
+var enableIntrospectionEndpoint = bool.TryParse(builder.Configuration["LocalAuth:EnableIntrospectionEndpoint"], out var parsedEnableIntrospection)
+    && parsedEnableIntrospection;
 
 var tenantId = builder.Configuration["AzureAd:TenantId"];
 var audience = builder.Configuration["AzureAd:Audience"];
