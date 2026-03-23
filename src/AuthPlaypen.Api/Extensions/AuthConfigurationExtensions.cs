@@ -69,7 +69,6 @@ public static class AuthConfigurationExtensions
 
         app.MapGet("/app-config", (IConfiguration config) =>
         {
-            var useMockData = config["AdminApp:UseMockData"];
             var enableOidcAuth = config["AdminApp:Oidc:EnableAuth"];
             var authority = config["AdminApp:Oidc:Authority"];
             var clientId = config["AdminApp:Oidc:ClientId"];
@@ -78,7 +77,6 @@ public static class AuthConfigurationExtensions
 
             return Results.Ok(new
             {
-                useMockData,
                 enableOidcAuth,
                 authority,
                 clientId,
