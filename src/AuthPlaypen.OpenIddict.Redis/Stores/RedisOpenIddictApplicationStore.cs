@@ -5,8 +5,9 @@ using System.Text.Json;
 using Microsoft.IdentityModel.Tokens;
 using OpenIddict.Abstractions;
 using StackExchange.Redis;
+using AuthPlaypen.OpenIddict.Redis.Models;
 
-namespace AuthPlaypen.OpenIddict.Redis;
+namespace AuthPlaypen.OpenIddict.Redis.Stores;
 
 public sealed class RedisOpenIddictApplicationStore(IConnectionMultiplexer multiplexer) : IOpenIddictApplicationStore<RedisOpenIddictApplication>
 {
@@ -62,10 +63,10 @@ public sealed class RedisOpenIddictApplicationStore(IConnectionMultiplexer multi
     }
 
     public IAsyncEnumerable<RedisOpenIddictApplication> FindByPostLogoutRedirectUriAsync([StringSyntax("Uri")] string address, CancellationToken cancellationToken)
-        => AsyncEnumerable.Empty<RedisOpenIddictApplication>();
+        => RedisAsyncEnumerable.Empty<RedisOpenIddictApplication>();
 
     public IAsyncEnumerable<RedisOpenIddictApplication> FindByRedirectUriAsync([StringSyntax("Uri")] string address, CancellationToken cancellationToken)
-        => AsyncEnumerable.Empty<RedisOpenIddictApplication>();
+        => RedisAsyncEnumerable.Empty<RedisOpenIddictApplication>();
 
     public ValueTask<string?> GetApplicationTypeAsync(RedisOpenIddictApplication application, CancellationToken cancellationToken) => new(application.ApplicationType);
 
@@ -112,10 +113,10 @@ public sealed class RedisOpenIddictApplicationStore(IConnectionMultiplexer multi
         => new(new RedisOpenIddictApplication());
 
     public IAsyncEnumerable<RedisOpenIddictApplication> ListAsync(int? count, int? offset, CancellationToken cancellationToken)
-        => AsyncEnumerable.Empty<RedisOpenIddictApplication>();
+        => RedisAsyncEnumerable.Empty<RedisOpenIddictApplication>();
 
     public IAsyncEnumerable<TResult> ListAsync<TState, TResult>(Func<IQueryable<RedisOpenIddictApplication>, TState, IQueryable<TResult>> query, TState state, CancellationToken cancellationToken)
-        => AsyncEnumerable.Empty<TResult>();
+        => RedisAsyncEnumerable.Empty<TResult>();
 
     public ValueTask SetApplicationTypeAsync(RedisOpenIddictApplication application, string? type, CancellationToken cancellationToken)
     {

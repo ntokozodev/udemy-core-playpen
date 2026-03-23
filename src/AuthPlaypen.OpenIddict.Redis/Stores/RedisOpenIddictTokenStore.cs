@@ -2,8 +2,9 @@ using System.Collections.Immutable;
 using System.Text.Json;
 using OpenIddict.Abstractions;
 using StackExchange.Redis;
+using AuthPlaypen.OpenIddict.Redis.Models;
 
-namespace AuthPlaypen.OpenIddict.Redis;
+namespace AuthPlaypen.OpenIddict.Redis.Stores;
 
 public sealed class RedisOpenIddictTokenStore(IConnectionMultiplexer multiplexer) : IOpenIddictTokenStore<RedisOpenIddictToken>
 {
@@ -135,10 +136,10 @@ public sealed class RedisOpenIddictTokenStore(IConnectionMultiplexer multiplexer
         => new(new RedisOpenIddictToken());
 
     public IAsyncEnumerable<RedisOpenIddictToken> ListAsync(int? count, int? offset, CancellationToken cancellationToken)
-        => AsyncEnumerable.Empty<RedisOpenIddictToken>();
+        => RedisAsyncEnumerable.Empty<RedisOpenIddictToken>();
 
     public IAsyncEnumerable<TResult> ListAsync<TState, TResult>(Func<IQueryable<RedisOpenIddictToken>, TState, IQueryable<TResult>> query, TState state, CancellationToken cancellationToken)
-        => AsyncEnumerable.Empty<TResult>();
+        => RedisAsyncEnumerable.Empty<TResult>();
 
     public ValueTask PruneAsync(DateTimeOffset threshold, CancellationToken cancellationToken)
         => ValueTask.CompletedTask;
@@ -319,32 +320,32 @@ public sealed class RedisOpenIddictTokenStore(IConnectionMultiplexer multiplexer
 
         if (!string.IsNullOrWhiteSpace(subject) && !string.IsNullOrWhiteSpace(client))
         {
-            tokenIds = [.. await _db.SetMembersAsync(RedisOpenIddictKeys.TokensBySubjectAndClient(subject, client))];
+            tokenIds = (await _db.SetMembersAsync(RedisOpenIddictKeys.TokensBySubjectAndClient(subject, client))).ToList();
         }
         else if (!string.IsNullOrWhiteSpace(subject))
         {
-            tokenIds = [.. await _db.SetMembersAsync(RedisOpenIddictKeys.TokensBySubject(subject))];
+            tokenIds = (await _db.SetMembersAsync(RedisOpenIddictKeys.TokensBySubject(subject))).ToList();
         }
         else if (!string.IsNullOrWhiteSpace(client))
         {
-            tokenIds = [.. await _db.SetMembersAsync(RedisOpenIddictKeys.TokensByApplicationId(client))];
+            tokenIds = (await _db.SetMembersAsync(RedisOpenIddictKeys.TokensByApplicationId(client))).ToList();
         }
 
         if (!string.IsNullOrWhiteSpace(status))
         {
-            var statusMembers = [.. await _db.SetMembersAsync(RedisOpenIddictKeys.TokensByStatus(status))];
+            var statusMembers = (await _db.SetMembersAsync(RedisOpenIddictKeys.TokensByStatus(status))).ToList();
             tokenIds = tokenIds is null ? statusMembers : tokenIds.Intersect(statusMembers).ToList();
         }
 
         if (!string.IsNullOrWhiteSpace(type))
         {
-            var typeMembers = [.. await _db.SetMembersAsync(RedisOpenIddictKeys.TokensByType(type))];
+            var typeMembers = (await _db.SetMembersAsync(RedisOpenIddictKeys.TokensByType(type))).ToList();
             tokenIds = tokenIds is null ? typeMembers : tokenIds.Intersect(typeMembers).ToList();
         }
 
         if (tokenIds is null)
         {
-            return [];
+            return new List<RedisOpenIddictToken>();
         }
 
         return await ResolveTokensAsync(tokenIds, cancellationToken);
@@ -398,14 +399,14 @@ public sealed class RedisOpenIddictTokenStore(IConnectionMultiplexer multiplexer
         var populatedKeys = keys.Where(static key => !string.IsNullOrWhiteSpace(key)).ToArray();
         if (populatedKeys.Length == 0)
         {
-            return [];
+            return Array.Empty<RedisValue>();
         }
 
         RedisValue[] current = await _db.SetMembersAsync(populatedKeys[0]);
         for (var i = 1; i < populatedKeys.Length; i++)
         {
             var next = await _db.SetMembersAsync(populatedKeys[i]);
-            current = [.. current.Intersect(next)];
+            current = current.Intersect(next).ToArray();
         }
 
         return current;

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using StackExchange.Redis;
 
-namespace AuthPlaypen.OpenIddict.Redis;
+namespace AuthPlaypen.OpenIddict.Redis.Stores;
 
 internal static class RedisOpenIddictKeys
 {
@@ -40,5 +40,15 @@ internal sealed class RedisOpenIddictSerializer
         }
 
         return JsonSerializer.Deserialize<T>(value!, Options);
+    }
+}
+
+
+internal static class RedisAsyncEnumerable
+{
+    public static async IAsyncEnumerable<T> Empty<T>()
+    {
+        await Task.CompletedTask;
+        yield break;
     }
 }
