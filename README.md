@@ -76,7 +76,7 @@ Vite env vars are build-time and frozen in the bundle, so QA/Staging/Live should
 - Frontend maps those values into runtime config and then starts the app.
 - In normal modes, runtime config comes from `/app-config` and overrides any build-time defaults.
 
-Server shape (implemented in `Program.cs`):
+Server shape (implemented in `AuthConfigurationExtensions.MapAuthPlaypenInfrastructure`):
 
 ```csharp
 app.MapGet("/app-config", (IConfiguration config) =>
