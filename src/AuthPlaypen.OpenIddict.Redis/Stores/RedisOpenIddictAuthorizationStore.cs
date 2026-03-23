@@ -55,6 +55,21 @@ public sealed class RedisOpenIddictAuthorizationStore(IConnectionMultiplexer mul
             string.Equals(authorization.Type, type, StringComparison.Ordinal) &&
             scopes.All(scope => authorization.Scopes.Contains(scope)), cancellationToken);
 
+    public IAsyncEnumerable<RedisOpenIddictAuthorization> FindAsync(
+        string? subject,
+        string? client,
+        string? status,
+        string? type,
+        ImmutableArray<string>? scopes,
+        CancellationToken cancellationToken)
+        => FilterAsync(authorization =>
+                (string.IsNullOrWhiteSpace(subject) || string.Equals(authorization.Subject, subject, StringComparison.Ordinal)) &&
+                (string.IsNullOrWhiteSpace(client) || string.Equals(authorization.ApplicationId, client, StringComparison.Ordinal)) &&
+                (string.IsNullOrWhiteSpace(status) || string.Equals(authorization.Status, status, StringComparison.Ordinal)) &&
+                (string.IsNullOrWhiteSpace(type) || string.Equals(authorization.Type, type, StringComparison.Ordinal)) &&
+                (scopes is null || scopes.Value.IsDefaultOrEmpty || scopes.Value.All(scope => authorization.Scopes.Contains(scope))),
+            cancellationToken);
+
     public IAsyncEnumerable<RedisOpenIddictAuthorization> FindByApplicationIdAsync(string identifier, CancellationToken cancellationToken)
         => FilterAsync(authorization => string.Equals(authorization.ApplicationId, identifier, StringComparison.Ordinal), cancellationToken);
 
@@ -107,19 +122,68 @@ public sealed class RedisOpenIddictAuthorizationStore(IConnectionMultiplexer mul
     public ValueTask PruneAsync(DateTimeOffset threshold, CancellationToken cancellationToken)
         => ValueTask.CompletedTask;
 
+    ValueTask<long> IOpenIddictAuthorizationStore<RedisOpenIddictAuthorization>.PruneAsync(DateTimeOffset threshold, CancellationToken cancellationToken)
+        => ValueTask.FromResult(0L);
+
     public async ValueTask RevokeAsync(string? subject, string? client, string? status, string? type, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        await foreach (var authorization in FilterAsync(authorization =>
-                           (string.IsNullOrWhiteSpace(subject) || string.Equals(authorization.Subject, subject, StringComparison.Ordinal)) &&
-                           (string.IsNullOrWhiteSpace(client) || string.Equals(authorization.ApplicationId, client, StringComparison.Ordinal)) &&
-                           (string.IsNullOrWhiteSpace(status) || string.Equals(authorization.Status, status, StringComparison.Ordinal)) &&
-                           (string.IsNullOrWhiteSpace(type) || string.Equals(authorization.Type, type, StringComparison.Ordinal)), cancellationToken))
+        await foreach (var authorization in FindAsync(subject, client, status, type, scopes: null, cancellationToken))
         {
             authorization.Status = OpenIddictConstants.Statuses.Revoked;
             await _db.StringSetAsync(RedisOpenIddictKeys.AuthorizationById(authorization.Id), _serializer.Serialize(authorization));
         }
+    }
+
+    async ValueTask<long> IOpenIddictAuthorizationStore<RedisOpenIddictAuthorization>.RevokeAsync(
+        string? subject,
+        string? client,
+        string? status,
+        string? type,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var count = 0L;
+        await foreach (var authorization in FindAsync(subject, client, status, type, scopes: null, cancellationToken))
+        {
+            authorization.Status = OpenIddictConstants.Statuses.Revoked;
+            await _db.StringSetAsync(RedisOpenIddictKeys.AuthorizationById(authorization.Id), _serializer.Serialize(authorization));
+            count++;
+        }
+
+        return count;
+    }
+
+    public async ValueTask<long> RevokeByApplicationIdAsync(string identifier, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var count = 0L;
+        await foreach (var authorization in FindByApplicationIdAsync(identifier, cancellationToken))
+        {
+            authorization.Status = OpenIddictConstants.Statuses.Revoked;
+            await _db.StringSetAsync(RedisOpenIddictKeys.AuthorizationById(authorization.Id), _serializer.Serialize(authorization));
+            count++;
+        }
+
+        return count;
+    }
+
+    public async ValueTask<long> RevokeBySubjectAsync(string subject, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var count = 0L;
+        await foreach (var authorization in FindBySubjectAsync(subject, cancellationToken))
+        {
+            authorization.Status = OpenIddictConstants.Statuses.Revoked;
+            await _db.StringSetAsync(RedisOpenIddictKeys.AuthorizationById(authorization.Id), _serializer.Serialize(authorization));
+            count++;
+        }
+
+        return count;
     }
 
     public ValueTask SetApplicationIdAsync(RedisOpenIddictAuthorization authorization, string? identifier, CancellationToken cancellationToken)

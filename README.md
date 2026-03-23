@@ -76,13 +76,13 @@ Vite env vars are build-time and frozen in the bundle, so QA/Staging/Live should
 - Frontend maps those values into runtime config and then starts the app.
 - In normal modes, runtime config comes from `/app-config` and overrides any build-time defaults.
 
-Server shape (implemented in `Program.cs`):
+Server shape (implemented in `src/AuthPlaypen.Api/Extensions/AuthConfigurationExtensions.cs`):
 
 ```csharp
 app.MapGet("/app-config", (IConfiguration config) =>
 {
-    var useMockData = config.GetValue<bool>("AdminApp:UseMockData");
-    var enableOidcAuth = config.GetValue<bool>("AdminApp:Oidc:EnableAuth");
+    var useMockData = config["AdminApp:UseMockData"];
+    var enableOidcAuth = config["AdminApp:Oidc:EnableAuth"];
     var authority = config["AdminApp:Oidc:Authority"];
     var clientId = config["AdminApp:Oidc:ClientId"];
     var redirectPath = config["AdminApp:Oidc:RedirectPath"];
