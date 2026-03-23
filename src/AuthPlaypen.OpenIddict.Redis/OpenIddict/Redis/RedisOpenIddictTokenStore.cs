@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Text.Json;
 using OpenIddict.Abstractions;
 using StackExchange.Redis;
 
@@ -71,6 +72,9 @@ public sealed class RedisOpenIddictTokenStore(IConnectionMultiplexer multiplexer
     public IAsyncEnumerable<RedisOpenIddictToken> FindByAuthorizationIdAsync(string identifier, CancellationToken cancellationToken)
         => StreamBySetKeyAsync(RedisOpenIddictKeys.TokensByAuthorizationId(identifier), cancellationToken);
 
+    public IAsyncEnumerable<RedisOpenIddictToken> FindBySubjectAsync(string subject, CancellationToken cancellationToken)
+        => StreamBySetKeyAsync(RedisOpenIddictKeys.TokensBySubject(subject), cancellationToken);
+
     public async ValueTask<RedisOpenIddictToken?> FindByIdAsync(string identifier, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -111,7 +115,10 @@ public sealed class RedisOpenIddictTokenStore(IConnectionMultiplexer multiplexer
     public ValueTask<string?> GetPayloadAsync(RedisOpenIddictToken token, CancellationToken cancellationToken) => new(token.Payload);
 
     public ValueTask<ImmutableDictionary<string, string>> GetPropertiesAsync(RedisOpenIddictToken token, CancellationToken cancellationToken)
-        => new(ImmutableDictionary<string, string>.Empty);
+        => new(ParseLegacyProperties(token.Properties));
+
+    ValueTask<ImmutableDictionary<string, JsonElement>> IOpenIddictTokenStore<RedisOpenIddictToken>.GetPropertiesAsync(RedisOpenIddictToken token, CancellationToken cancellationToken)
+        => new(ParseJsonProperties(token.Properties));
 
     public ValueTask<DateTimeOffset?> GetRedemptionDateAsync(RedisOpenIddictToken token, CancellationToken cancellationToken)
         => new(ParseDate(token.RedemptionDate));
@@ -136,6 +143,9 @@ public sealed class RedisOpenIddictTokenStore(IConnectionMultiplexer multiplexer
     public ValueTask PruneAsync(DateTimeOffset threshold, CancellationToken cancellationToken)
         => ValueTask.CompletedTask;
 
+    ValueTask<long> IOpenIddictTokenStore<RedisOpenIddictToken>.PruneAsync(DateTimeOffset threshold, CancellationToken cancellationToken)
+        => ValueTask.FromResult(0L);
+
     public async ValueTask RevokeAsync(string? subject, string? client, string? status, string? type, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -146,6 +156,45 @@ public sealed class RedisOpenIddictTokenStore(IConnectionMultiplexer multiplexer
             token.Status = OpenIddictConstants.Statuses.Revoked;
             await PersistAsync(token);
         }
+    }
+
+    async ValueTask<long> IOpenIddictTokenStore<RedisOpenIddictToken>.RevokeAsync(
+        string? subject,
+        string? client,
+        string? status,
+        string? type,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var tokens = await ResolveTokensForRevokeAsync(subject, client, status, type, cancellationToken);
+        foreach (var token in tokens)
+        {
+            token.Status = OpenIddictConstants.Statuses.Revoked;
+            await PersistAsync(token);
+        }
+
+        return tokens.Count;
+    }
+
+    public ValueTask<long> RevokeByApplicationIdAsync(string identifier, CancellationToken cancellationToken = default)
+        => RevokeByApplicationOrAuthorizationIdAsync(RedisOpenIddictKeys.TokensByApplicationId(identifier), cancellationToken);
+
+    public ValueTask<long> RevokeByAuthorizationIdAsync(string identifier, CancellationToken cancellationToken)
+        => RevokeByApplicationOrAuthorizationIdAsync(RedisOpenIddictKeys.TokensByAuthorizationId(identifier), cancellationToken);
+
+    public async ValueTask<long> RevokeBySubjectAsync(string subject, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var tokens = await ResolveTokensAsync(await _db.SetMembersAsync(RedisOpenIddictKeys.TokensBySubject(subject)), cancellationToken);
+        foreach (var token in tokens)
+        {
+            token.Status = OpenIddictConstants.Statuses.Revoked;
+            await PersistAsync(token);
+        }
+
+        return tokens.Count;
     }
 
     public ValueTask SetApplicationIdAsync(RedisOpenIddictToken token, string? identifier, CancellationToken cancellationToken)
@@ -179,7 +228,16 @@ public sealed class RedisOpenIddictTokenStore(IConnectionMultiplexer multiplexer
     }
 
     public ValueTask SetPropertiesAsync(RedisOpenIddictToken token, ImmutableDictionary<string, string> properties, CancellationToken cancellationToken)
-        => ValueTask.CompletedTask;
+    {
+        token.Properties = JsonSerializer.Serialize(properties);
+        return ValueTask.CompletedTask;
+    }
+
+    public ValueTask SetPropertiesAsync(RedisOpenIddictToken token, ImmutableDictionary<string, JsonElement> properties, CancellationToken cancellationToken)
+    {
+        token.Properties = JsonSerializer.Serialize(properties);
+        return ValueTask.CompletedTask;
+    }
 
     public ValueTask SetRedemptionDateAsync(RedisOpenIddictToken token, DateTimeOffset? date, CancellationToken cancellationToken)
     {
@@ -292,6 +350,20 @@ public sealed class RedisOpenIddictTokenStore(IConnectionMultiplexer multiplexer
         return await ResolveTokensAsync(tokenIds, cancellationToken);
     }
 
+    private async ValueTask<long> RevokeByApplicationOrAuthorizationIdAsync(string indexKey, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var tokens = await ResolveTokensAsync(await _db.SetMembersAsync(indexKey), cancellationToken);
+        foreach (var token in tokens)
+        {
+            token.Status = OpenIddictConstants.Statuses.Revoked;
+            await PersistAsync(token);
+        }
+
+        return tokens.Count;
+    }
+
     private async IAsyncEnumerable<RedisOpenIddictToken> StreamBySetKeyAsync(string key, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -372,5 +444,41 @@ public sealed class RedisOpenIddictTokenStore(IConnectionMultiplexer multiplexer
 
         var ttl = expires.Value - DateTimeOffset.UtcNow;
         return ttl <= TimeSpan.Zero ? TimeSpan.FromSeconds(1) : ttl;
+    }
+
+    private static ImmutableDictionary<string, string> ParseLegacyProperties(string? payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return ImmutableDictionary<string, string>.Empty;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<Dictionary<string, string>>(payload)?.ToImmutableDictionary() ??
+                   ImmutableDictionary<string, string>.Empty;
+        }
+        catch (JsonException)
+        {
+            return ImmutableDictionary<string, string>.Empty;
+        }
+    }
+
+    private static ImmutableDictionary<string, JsonElement> ParseJsonProperties(string? payload)
+    {
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            return ImmutableDictionary<string, JsonElement>.Empty;
+        }
+
+        try
+        {
+            return JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(payload)?.ToImmutableDictionary() ??
+                   ImmutableDictionary<string, JsonElement>.Empty;
+        }
+        catch (JsonException)
+        {
+            return ImmutableDictionary<string, JsonElement>.Empty;
+        }
     }
 }

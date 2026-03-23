@@ -56,6 +56,34 @@ public sealed class RedisOpenIddictScopeStore(IConnectionMultiplexer multiplexer
         return _serializer.Deserialize<RedisOpenIddictScope>(payload);
     }
 
+    public async IAsyncEnumerable<RedisOpenIddictScope> FindByNamesAsync(
+        ImmutableArray<string> names,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        foreach (var name in names.Where(static name => !string.IsNullOrWhiteSpace(name)).Distinct(StringComparer.Ordinal))
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var scope = await FindByNameAsync(name, cancellationToken);
+            if (scope is not null)
+            {
+                yield return scope;
+            }
+        }
+    }
+
+    public async IAsyncEnumerable<RedisOpenIddictScope> FindByResourceAsync(
+        string resource,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        await foreach (var scope in ListAllScopesAsync(cancellationToken))
+        {
+            if (scope.Resources.Contains(resource, StringComparer.Ordinal))
+            {
+                yield return scope;
+            }
+        }
+    }
+
     public ValueTask<TResult?> GetAsync<TState, TResult>(Func<IQueryable<RedisOpenIddictScope>, TState, IQueryable<TResult>> query, TState state, CancellationToken cancellationToken)
         => throw new NotSupportedException();
 
@@ -65,6 +93,9 @@ public sealed class RedisOpenIddictScopeStore(IConnectionMultiplexer multiplexer
 
     public ValueTask<ImmutableDictionary<CultureInfo, string>> GetDisplayNamesAsync(RedisOpenIddictScope scope, CancellationToken cancellationToken)
         => new(scope.DisplayNames.ToImmutableDictionary(entry => CultureInfo.GetCultureInfo(entry.Key), entry => entry.Value));
+
+    public ValueTask<ImmutableDictionary<CultureInfo, string>> GetDescriptionsAsync(RedisOpenIddictScope scope, CancellationToken cancellationToken)
+        => new(GetLocalizedValues(scope.Description));
 
     public ValueTask<string?> GetIdAsync(RedisOpenIddictScope scope, CancellationToken cancellationToken) => new(scope.Id);
 
@@ -103,6 +134,16 @@ public sealed class RedisOpenIddictScopeStore(IConnectionMultiplexer multiplexer
         return ValueTask.CompletedTask;
     }
 
+    public ValueTask SetDescriptionsAsync(RedisOpenIddictScope scope, ImmutableDictionary<CultureInfo, string> descriptions, CancellationToken cancellationToken)
+    {
+        var values = descriptions
+            .Where(static entry => !string.IsNullOrWhiteSpace(entry.Value))
+            .ToDictionary(entry => entry.Key.Name, entry => entry.Value);
+
+        scope.Description = values.Count == 0 ? null : JsonSerializer.Serialize(values);
+        return ValueTask.CompletedTask;
+    }
+
     public ValueTask SetNameAsync(RedisOpenIddictScope scope, string? name, CancellationToken cancellationToken)
     {
         scope.Name = name;
@@ -123,4 +164,45 @@ public sealed class RedisOpenIddictScopeStore(IConnectionMultiplexer multiplexer
 
     public ValueTask UpdateAsync(RedisOpenIddictScope scope, CancellationToken cancellationToken)
         => CreateAsync(scope, cancellationToken);
+
+    private async IAsyncEnumerable<RedisOpenIddictScope> ListAllScopesAsync(
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        foreach (var endpoint in multiplexer.GetEndPoints())
+        {
+            var server = multiplexer.GetServer(endpoint);
+            foreach (var key in server.Keys(pattern: "oidc:scopes:id:*").Select(static x => (string)x))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var payload = await _db.StringGetAsync(key);
+                var scope = _serializer.Deserialize<RedisOpenIddictScope>(payload);
+                if (scope is not null)
+                {
+                    yield return scope;
+                }
+            }
+        }
+    }
+
+    private static ImmutableDictionary<CultureInfo, string> GetLocalizedValues(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return ImmutableDictionary<CultureInfo, string>.Empty;
+        }
+
+        try
+        {
+            var dictionary = JsonSerializer.Deserialize<Dictionary<string, string>>(value);
+            return dictionary is null
+                ? ImmutableDictionary<CultureInfo, string>.Empty
+                : dictionary.ToImmutableDictionary(
+                    entry => CultureInfo.GetCultureInfo(entry.Key),
+                    entry => entry.Value);
+        }
+        catch (JsonException)
+        {
+            return ImmutableDictionary<CultureInfo, string>.Empty;
+        }
+    }
 }
