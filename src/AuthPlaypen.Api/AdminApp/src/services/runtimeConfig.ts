@@ -9,7 +9,6 @@ type RuntimeConfig = Partial<{
 }>;
 
 type AppConfigResponse = Partial<{
-  useMockData: boolean;
   enableOidcAuth: boolean;
   authority: string;
   clientId: string;
@@ -59,7 +58,6 @@ function applyApiRuntimeConfig(config: AppConfigResponse): void {
   window.__AUTH_PLAYPEN_CONFIG__ ??= {};
   const runtimeConfig = window.__AUTH_PLAYPEN_CONFIG__;
 
-  setRuntimeConfigValue(runtimeConfig, "VITE_USE_MOCK_DATA", config.useMockData);
   setRuntimeConfigValue(runtimeConfig, "VITE_ENABLE_OIDC_AUTH", config.enableOidcAuth);
   setRuntimeConfigValue(runtimeConfig, "VITE_API_OIDC_AUTHORITY", config.authority);
   setRuntimeConfigValue(runtimeConfig, "VITE_API_OIDC_CLIENT_ID", config.clientId);

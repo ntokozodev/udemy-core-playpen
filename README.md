@@ -76,12 +76,11 @@ Vite env vars are build-time and frozen in the bundle, so QA/Staging/Live should
 - Frontend maps those values into runtime config and then starts the app.
 - In normal modes, runtime config comes from `/app-config` and overrides any build-time defaults.
 
-Server shape (implemented in `Program.cs`):
+Server shape (implemented in `AuthConfigurationExtensions.MapAuthPlaypenInfrastructure`):
 
 ```csharp
 app.MapGet("/app-config", (IConfiguration config) =>
 {
-    var useMockData = config.GetValue<bool>("AdminApp:UseMockData");
     var enableOidcAuth = config.GetValue<bool>("AdminApp:Oidc:EnableAuth");
     var authority = config["AdminApp:Oidc:Authority"];
     var clientId = config["AdminApp:Oidc:ClientId"];
@@ -90,7 +89,6 @@ app.MapGet("/app-config", (IConfiguration config) =>
 
     return Results.Ok(new
     {
-        useMockData,
         enableOidcAuth,
         authority,
         clientId,
@@ -105,7 +103,6 @@ app.MapGet("/app-config", (IConfiguration config) =>
 Set environment variables for the API process (systemd/container/app service), for example:
 
 ```bash
-AdminApp__UseMockData=false
 AdminApp__Oidc__EnableAuth=true
 AdminApp__Oidc__Authority=https://login.qa.example.com
 AdminApp__Oidc__ClientId=authkeeper-web-admin
@@ -125,7 +122,6 @@ Local defaults are now defined in `src/AuthPlaypen.Api/appsettings.Development.j
 
 ```json
 "AdminApp": {
-  "UseMockData": "true",
   "Oidc": {
     "EnableAuth": "false",
     "Authority": "https://localhost:5100",
@@ -143,8 +139,6 @@ npm run dev:local-mock
 ```
 
 This mode loads `src/AuthPlaypen.Api/AdminApp/.env.localmock` (`VITE_LOCAL_RUN_MODE=true`) and allows startup to continue when `/app-config` is unavailable, while forcing mock API usage.
-
-`UseMockData=true` still only switches admin CRUD/data requests to the in-memory mock API.
 
 
 
