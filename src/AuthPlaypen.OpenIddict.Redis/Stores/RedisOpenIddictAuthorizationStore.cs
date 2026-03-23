@@ -234,12 +234,6 @@ public sealed class RedisOpenIddictAuthorizationStore(IConnectionMultiplexer mul
         CancellationToken cancellationToken)
         => GetApplicationIdAsync(authorization, cancellationToken);
 
-    ValueTask<TResult?> IOpenIddictAuthorizationStore<RedisOpenIddictAuthorization>.GetAsync<TState, TResult>(
-        Func<IQueryable<RedisOpenIddictAuthorization>, TState, IQueryable<TResult>> query,
-        TState state,
-        CancellationToken cancellationToken)
-        => GetAsync(query, state, cancellationToken);
-
     ValueTask<DateTimeOffset?> IOpenIddictAuthorizationStore<RedisOpenIddictAuthorization>.GetCreationDateAsync(
         RedisOpenIddictAuthorization authorization,
         CancellationToken cancellationToken)
