@@ -8,8 +8,8 @@ type RuntimeConfig = Partial<{
 }>;
 
 type AppConfigResponse = Partial<{
-  useMockData: string;
-  enableOidcAuth: string;
+  useMockData: boolean;
+  enableOidcAuth: boolean;
   authority: string;
   clientId: string;
   redirectPath: string;
@@ -29,17 +29,24 @@ function readRuntimeConfigValue(key: keyof RuntimeConfig): string | undefined {
 function setRuntimeConfigValue(
   runtimeConfig: RuntimeConfig,
   key: keyof RuntimeConfig,
-  value: string | undefined,
+  value: string | boolean | undefined,
 ): void {
-  if (!value?.trim()) {
+  if (value === undefined) {
     return;
   }
 
-  runtimeConfig[key] = value.trim();
+  const normalizedValue = String(value).trim();
+
+  if (!normalizedValue) {
+    return;
+  }
+
+  runtimeConfig[key] = normalizedValue;
 }
 
 function applyApiRuntimeConfig(config: AppConfigResponse): void {
-  const runtimeConfig: RuntimeConfig = {};
+  window.__AUTH_PLAYPEN_CONFIG__ ??= {};
+  const runtimeConfig = window.__AUTH_PLAYPEN_CONFIG__;
 
   setRuntimeConfigValue(runtimeConfig, "VITE_USE_MOCK_DATA", config.useMockData);
   setRuntimeConfigValue(runtimeConfig, "VITE_ENABLE_OIDC_AUTH", config.enableOidcAuth);
@@ -47,8 +54,6 @@ function applyApiRuntimeConfig(config: AppConfigResponse): void {
   setRuntimeConfigValue(runtimeConfig, "VITE_API_OIDC_CLIENT_ID", config.clientId);
   setRuntimeConfigValue(runtimeConfig, "VITE_OIDC_REDIRECT_PATH", config.redirectPath);
   setRuntimeConfigValue(runtimeConfig, "VITE_OIDC_POST_LOGOUT_REDIRECT_PATH", config.postLogoutRedirectPath);
-
-  window.__AUTH_PLAYPEN_CONFIG__ = runtimeConfig;
 }
 
 export async function loadRuntimeConfig(): Promise<void> {

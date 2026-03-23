@@ -81,14 +81,14 @@ Server shape (implemented in `Program.cs`):
 ```csharp
 app.MapGet("/app-config", (IConfiguration config, IWebHostEnvironment environment) =>
 {
-    var useMockData = config["AdminApp:UseMockData"];
-    var enableOidcAuth = config["AdminApp:Oidc:EnableAuth"];
+    var useMockData = config.GetValue<bool>("AdminApp:UseMockData");
+    var enableOidcAuth = config.GetValue<bool>("AdminApp:Oidc:EnableAuth");
     var authority = config["AdminApp:Oidc:Authority"];
     var clientId = config["AdminApp:Oidc:ClientId"];
     var redirectPath = config["AdminApp:Oidc:RedirectPath"];
     var postLogoutRedirectPath = config["AdminApp:Oidc:PostLogoutRedirectPath"];
 
-    var useLocalMockDefaults = environment.IsDevelopment() && string.Equals(useMockData, "true", StringComparison.OrdinalIgnoreCase);
+    var useLocalMockDefaults = environment.IsDevelopment() && useMockData;
 
     if (useLocalMockDefaults)
     {

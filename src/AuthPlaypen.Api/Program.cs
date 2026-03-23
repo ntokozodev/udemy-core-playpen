@@ -27,9 +27,24 @@ static void ConfigureSigningCertificate(OpenIddictServerBuilder options, IConfig
             throw new InvalidOperationException($"OpenIddict signing certificate file not found: {certPath}");
         }
 
-        var certificate = new X509Certificate2(certPath, certPassword);
-        options.AddSigningCertificate(certificate);
-        return;
+
+app.MapGet("/app-config", (IConfiguration config, IWebHostEnvironment environment) =>
+{
+    var useMockData = config.GetValue<bool>("AdminApp:UseMockData");
+    var enableOidcAuth = config.GetValue<bool>("AdminApp:Oidc:EnableAuth");
+    var authority = config["AdminApp:Oidc:Authority"];
+    var clientId = config["AdminApp:Oidc:ClientId"];
+    var redirectPath = config["AdminApp:Oidc:RedirectPath"];
+    var postLogoutRedirectPath = config["AdminApp:Oidc:PostLogoutRedirectPath"];
+
+    var useLocalMockDefaults = environment.IsDevelopment() && useMockData;
+
+    if (useLocalMockDefaults)
+    {
+        authority = "https://localhost:5100";
+        clientId = "gatekeeper-web-admin";
+        redirectPath = "/auth/callback";
+        postLogoutRedirectPath = "/";
     }
 
     options.AddDevelopmentSigningCertificate();
