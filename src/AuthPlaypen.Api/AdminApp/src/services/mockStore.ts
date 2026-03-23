@@ -11,10 +11,6 @@ function applicationReference(app: Application): ApplicationReference {
     id: app.id,
     displayName: app.displayName,
     clientId: app.clientId,
-    clientSecret: app.clientSecret,
-    flow: app.flow,
-    postLogoutRedirectUris: app.postLogoutRedirectUris,
-    redirectUris: app.redirectUris,
   };
 }
 

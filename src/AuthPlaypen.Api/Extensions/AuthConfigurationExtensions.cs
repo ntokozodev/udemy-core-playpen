@@ -67,7 +67,7 @@ public static class AuthConfigurationExtensions
         app.UseAuthentication();
         app.UseAuthorization();
 
-        app.MapGet("/app-config", (IConfiguration config, IWebHostEnvironment environment) =>
+        app.MapGet("/app-config", (IConfiguration config) =>
         {
             var useMockData = config["AdminApp:UseMockData"];
             var enableOidcAuth = config["AdminApp:Oidc:EnableAuth"];
@@ -75,16 +75,6 @@ public static class AuthConfigurationExtensions
             var clientId = config["AdminApp:Oidc:ClientId"];
             var redirectPath = config["AdminApp:Oidc:RedirectPath"];
             var postLogoutRedirectPath = config["AdminApp:Oidc:PostLogoutRedirectPath"];
-
-            var useLocalMockDefaults = environment.IsDevelopment() && string.Equals(useMockData, "true", StringComparison.OrdinalIgnoreCase);
-
-            if (useLocalMockDefaults)
-            {
-                authority = "https://localhost:5100";
-                clientId = "authkeeper-web-admin";
-                redirectPath = "/auth/callback";
-                postLogoutRedirectPath = "/";
-            }
 
             return Results.Ok(new
             {
