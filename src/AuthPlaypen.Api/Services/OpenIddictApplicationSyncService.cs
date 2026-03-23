@@ -53,6 +53,8 @@ public sealed class OpenIddictApplicationSyncService(IOpenIddictApplicationManag
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Authorization);
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Token);
         descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Logout);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Introspection);
+        descriptor.Permissions.Add(OpenIddictConstants.Permissions.Endpoints.Revocation);
 
         if (dto.Flow == ApplicationFlow.AuthorizationWithPKCE)
         {

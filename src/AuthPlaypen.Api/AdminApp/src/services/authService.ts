@@ -52,3 +52,22 @@ export async function completeSigninRedirect(): Promise<void> {
   const manager = getUserManager();
   await manager.signinRedirectCallback();
 }
+
+export async function signOut(): Promise<void> {
+  if (!isOidcAuthEnabled) {
+    return;
+  }
+
+  const manager = getUserManager();
+  await manager.signoutRedirect();
+}
+
+export async function completeSignoutRedirect(): Promise<void> {
+  if (!isOidcAuthEnabled) {
+    return;
+  }
+
+  const manager = getUserManager();
+  await manager.signoutRedirectCallback();
+  await manager.removeUser();
+}

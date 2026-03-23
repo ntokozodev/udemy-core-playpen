@@ -4,6 +4,7 @@ import { MainLayout } from "@/layouts/MainLayout";
 import { ApplicationDetails } from "@/pages/ApplicationDetails";
 import { Applications } from "@/pages/Applications";
 import { AuthCallback } from "@/pages/AuthCallback";
+import { AuthLogoutCallback } from "@/pages/AuthLogoutCallback";
 import { CreateApplication } from "@/pages/CreateApplication";
 import { CreateScope } from "@/pages/CreateScope";
 import { Dashboard } from "@/pages/Dashboard";
@@ -24,6 +25,7 @@ export default function App() {
   return (
     <Router base="/admin">
       <Route path="/auth/callback" component={AuthCallback} />
+      <Route path="/auth/logout-callback" component={AuthLogoutCallback} />
       <Route component={ProtectedLayout}>
         <Route path="/" component={Dashboard} />
         <Route path="/applications" component={Applications} />
