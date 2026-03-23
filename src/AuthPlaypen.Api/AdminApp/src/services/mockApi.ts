@@ -1,5 +1,5 @@
 import { mockStore } from "@/services/mockStore";
-import type { Application, CursorPage, Scope } from "@/types/models";
+import type { Application, ApplicationReference, CursorPage, EntityMetadata, Scope, ScopeReference } from "@/types/models";
 
 function toCursorPage<T extends { id: string }>(items: T[], cursor?: string, pageSize = 10): CursorPage<T> {
   const start = cursor ? items.findIndex((item) => item.id === cursor) + 1 : 0;
@@ -15,24 +15,39 @@ function query(path: string) {
   return { pathname, params: new URLSearchParams(raw) };
 }
 
-function appToReference(app: Application) {
+function appToReference(app: Application): ApplicationReference {
   return {
     id: app.id,
     displayName: app.displayName,
     clientId: app.clientId,
-    clientSecret: app.clientSecret,
-    flow: app.flow,
-    postLogoutRedirectUris: app.postLogoutRedirectUris,
-    redirectUris: app.redirectUris,
   };
 }
 
-function scopeToReference(scope: Scope) {
+function scopeToReference(scope: Scope): ScopeReference {
   return {
     id: scope.id,
     displayName: scope.displayName,
     scopeName: scope.scopeName,
     description: scope.description,
+  };
+}
+
+function createMetadata(createdBy = "mock-system"): EntityMetadata {
+  const timestamp = new Date().toISOString();
+
+  return {
+    createdBy,
+    createdAt: timestamp,
+    updatedBy: createdBy,
+    updatedAt: timestamp,
+  };
+}
+
+function touchMetadata(current: EntityMetadata, updatedBy = "mock-system"): EntityMetadata {
+  return {
+    ...current,
+    updatedBy,
+    updatedAt: new Date().toISOString(),
   };
 }
 
@@ -46,7 +61,6 @@ export async function mockHttp<T>(path: string, init?: RequestInit): Promise<T> 
     const items = [...mockStore.getApplications()].sort((a, b) => a.id.localeCompare(b.id));
     return toCursorPage(items, cursor, pageSize) as T;
   }
-
 
   if (method === "GET" && pathname === "/applications/search") {
     const term = (params.get("term") ?? "").trim().toLowerCase();
@@ -70,7 +84,14 @@ export async function mockHttp<T>(path: string, init?: RequestInit): Promise<T> 
     const payload = JSON.parse(init?.body as string);
     const scopeIds = new Set(payload.scopeIds ?? []);
     const scopes = mockStore.getScopes().filter((s) => scopeIds.has(s.id)).map(scopeToReference);
-    const created: Application = { ...payload, id: crypto.randomUUID(), scopes };
+
+    const created: Application = {
+      ...payload,
+      id: crypto.randomUUID(),
+      scopes,
+      metadata: createMetadata(),
+    };
+
     mockStore.setApplications([...mockStore.getApplications(), created]);
     return created as T;
   }
@@ -83,7 +104,13 @@ export async function mockHttp<T>(path: string, init?: RequestInit): Promise<T> 
     if (index < 0) throw new Error(`Application ${id} not found`);
     const scopeIds = new Set(payload.scopeIds ?? []);
     const scopes = mockStore.getScopes().filter((s) => scopeIds.has(s.id)).map(scopeToReference);
-    const updated: Application = { ...current[index], ...payload, id, scopes };
+    const updated: Application = {
+      ...current[index],
+      ...payload,
+      id,
+      scopes,
+      metadata: touchMetadata(current[index].metadata),
+    };
     const next = [...current];
     next[index] = updated;
     mockStore.setApplications(next);
@@ -102,7 +129,6 @@ export async function mockHttp<T>(path: string, init?: RequestInit): Promise<T> 
     const items = [...mockStore.getScopes()].sort((a, b) => a.id.localeCompare(b.id));
     return toCursorPage(items, cursor, pageSize) as T;
   }
-
 
   if (method === "GET" && pathname === "/scopes/search") {
     const term = (params.get("term") ?? "").trim().toLowerCase();
@@ -126,7 +152,14 @@ export async function mockHttp<T>(path: string, init?: RequestInit): Promise<T> 
     const payload = JSON.parse(init?.body as string);
     const appIds = new Set(payload.applicationIds ?? []);
     const applications = mockStore.getApplications().filter((a) => appIds.has(a.id)).map(appToReference);
-    const created: Scope = { ...payload, id: crypto.randomUUID(), applications };
+
+    const created: Scope = {
+      ...payload,
+      id: crypto.randomUUID(),
+      applications,
+      metadata: createMetadata(),
+    };
+
     mockStore.setScopes([...mockStore.getScopes(), created]);
     return created as T;
   }
@@ -139,7 +172,13 @@ export async function mockHttp<T>(path: string, init?: RequestInit): Promise<T> 
     if (index < 0) throw new Error(`Scope ${id} not found`);
     const appIds = new Set(payload.applicationIds ?? []);
     const applications = mockStore.getApplications().filter((a) => appIds.has(a.id)).map(appToReference);
-    const updated: Scope = { ...current[index], ...payload, id, applications };
+    const updated: Scope = {
+      ...current[index],
+      ...payload,
+      id,
+      applications,
+      metadata: touchMetadata(current[index].metadata),
+    };
     const next = [...current];
     next[index] = updated;
     mockStore.setScopes(next);

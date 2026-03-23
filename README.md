@@ -63,23 +63,23 @@ The admin frontend includes an `oidc-client-ts` based auth flow that is intentio
 - Frontend OIDC user state is stored in `sessionStorage` (not `localStorage`).
 - The admin app should point to **API/OpenIddict authority only** and should not target Azure directly.
 
-Runtime configuration for `src/AuthPlaypen.Api/AdminApp` is **100% API-served** (no Vite `.env` fallback in frontend).
+Runtime configuration for `src/AuthPlaypen.Api/AdminApp` is API-served by default, with an explicit local-only Vite mode fallback for isolated frontend work.
 
 ## Environment strategy for QA/Staging/Live (API-served runtime config)
 
-Vite env vars are build-time and frozen in the bundle, so the admin app now loads config only from `GET /app-config` at startup.
+Vite env vars are build-time and frozen in the bundle, so QA/Staging/Live should rely on `GET /app-config` at startup.
 
 ### How it works
 
 - Admin frontend boots and calls `GET /app-config`.
 - API returns runtime settings from `IConfiguration`.
 - Frontend maps those values into runtime config and then starts the app.
-- Even when mock data is enabled, runtime config still comes from `/app-config`, so the API must be running for the admin app to boot.
+- In normal modes, runtime config comes from `/app-config` and overrides any build-time defaults.
 
 Server shape (implemented in `Program.cs`):
 
 ```csharp
-app.MapGet("/app-config", (IConfiguration config, IWebHostEnvironment environment) =>
+app.MapGet("/app-config", (IConfiguration config) =>
 {
     var useMockData = config.GetValue<bool>("AdminApp:UseMockData");
     var enableOidcAuth = config.GetValue<bool>("AdminApp:Oidc:EnableAuth");
@@ -87,16 +87,6 @@ app.MapGet("/app-config", (IConfiguration config, IWebHostEnvironment environmen
     var clientId = config["AdminApp:Oidc:ClientId"];
     var redirectPath = config["AdminApp:Oidc:RedirectPath"];
     var postLogoutRedirectPath = config["AdminApp:Oidc:PostLogoutRedirectPath"];
-
-    var useLocalMockDefaults = environment.IsDevelopment() && useMockData;
-
-    if (useLocalMockDefaults)
-    {
-        authority = "https://localhost:5100";
-        clientId = "authkeeper-web-admin";
-        redirectPath = "/auth/callback";
-        postLogoutRedirectPath = "/";
-    }
 
     return Results.Ok(new
     {
@@ -146,9 +136,15 @@ Local defaults are now defined in `src/AuthPlaypen.Api/appsettings.Development.j
 }
 ```
 
-The `/app-config` endpoint reads these values in Development, so local mock mode works without extra env setup.
+For isolated frontend work (for example styling-only tasks), run the admin app with:
 
-`UseMockData=true` only switches admin CRUD/data requests to the in-memory mock API. It does not bypass runtime config loading.
+```bash
+npm run dev:local-mock
+```
+
+This mode loads `src/AuthPlaypen.Api/AdminApp/.env.localmock` (`VITE_LOCAL_RUN_MODE=true`) and allows startup to continue when `/app-config` is unavailable, while forcing mock API usage.
+
+`UseMockData=true` still only switches admin CRUD/data requests to the in-memory mock API.
 
 
 

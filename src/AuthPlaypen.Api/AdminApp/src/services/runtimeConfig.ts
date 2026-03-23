@@ -5,6 +5,7 @@ type RuntimeConfig = Partial<{
   VITE_API_OIDC_CLIENT_ID: string;
   VITE_OIDC_REDIRECT_PATH: string;
   VITE_OIDC_POST_LOGOUT_REDIRECT_PATH: string;
+  VITE_LOCAL_RUN_MODE: string;
 }>;
 
 type AppConfigResponse = Partial<{
@@ -21,6 +22,16 @@ declare global {
     __AUTH_PLAYPEN_CONFIG__?: RuntimeConfig;
   }
 }
+
+const buildTimeRuntimeConfig: RuntimeConfig = {
+  VITE_USE_MOCK_DATA: import.meta.env.VITE_USE_MOCK_DATA,
+  VITE_ENABLE_OIDC_AUTH: import.meta.env.VITE_ENABLE_OIDC_AUTH,
+  VITE_API_OIDC_AUTHORITY: import.meta.env.VITE_API_OIDC_AUTHORITY,
+  VITE_API_OIDC_CLIENT_ID: import.meta.env.VITE_API_OIDC_CLIENT_ID,
+  VITE_OIDC_REDIRECT_PATH: import.meta.env.VITE_OIDC_REDIRECT_PATH,
+  VITE_OIDC_POST_LOGOUT_REDIRECT_PATH: import.meta.env.VITE_OIDC_POST_LOGOUT_REDIRECT_PATH,
+  VITE_LOCAL_RUN_MODE: import.meta.env.VITE_LOCAL_RUN_MODE,
+};
 
 function readRuntimeConfigValue(key: keyof RuntimeConfig): string | undefined {
   return window.__AUTH_PLAYPEN_CONFIG__?.[key]?.trim();
@@ -56,18 +67,46 @@ function applyApiRuntimeConfig(config: AppConfigResponse): void {
   setRuntimeConfigValue(runtimeConfig, "VITE_OIDC_POST_LOGOUT_REDIRECT_PATH", config.postLogoutRedirectPath);
 }
 
-export async function loadRuntimeConfig(): Promise<void> {
-  const response = await fetch("/app-config", { cache: "no-store" });
-
-  if (!response.ok) {
-    throw new Error(`Failed to load runtime config: ${response.status}`);
+function initializeRuntimeConfig(): void {
+  if (window.__AUTH_PLAYPEN_CONFIG__) {
+    return;
   }
 
-  const apiConfig = (await response.json()) as AppConfigResponse;
-  applyApiRuntimeConfig(apiConfig);
+  window.__AUTH_PLAYPEN_CONFIG__ = {};
+  const runtimeConfig = window.__AUTH_PLAYPEN_CONFIG__;
+
+  for (const key of Object.keys(buildTimeRuntimeConfig) as Array<keyof RuntimeConfig>) {
+    setRuntimeConfigValue(runtimeConfig, key, buildTimeRuntimeConfig[key]);
+  }
+}
+
+function isLocalRunModeEnabled(): boolean {
+  return getConfigValue("VITE_LOCAL_RUN_MODE") === "true";
+}
+
+export async function loadRuntimeConfig(): Promise<void> {
+  initializeRuntimeConfig();
+
+  try {
+    const response = await fetch("/app-config", { cache: "no-store" });
+
+    if (!response.ok) {
+      throw new Error(`Failed to load runtime config: ${response.status}`);
+    }
+
+    const apiConfig = (await response.json()) as AppConfigResponse;
+    applyApiRuntimeConfig(apiConfig);
+  } catch (error) {
+    if (isLocalRunModeEnabled()) {
+      return;
+    }
+
+    throw error;
+  }
 }
 
 export function getConfigValue(key: keyof RuntimeConfig): string | undefined {
+  initializeRuntimeConfig();
   return readRuntimeConfigValue(key);
 }
 
