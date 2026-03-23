@@ -3,8 +3,9 @@ using System.Globalization;
 using System.Text.Json;
 using OpenIddict.Abstractions;
 using StackExchange.Redis;
+using AuthPlaypen.OpenIddict.Redis.Models;
 
-namespace AuthPlaypen.OpenIddict.Redis;
+namespace AuthPlaypen.OpenIddict.Redis.Stores;
 
 public sealed class RedisOpenIddictScopeStore(IConnectionMultiplexer multiplexer) : IOpenIddictScopeStore<RedisOpenIddictScope>
 {
@@ -111,10 +112,10 @@ public sealed class RedisOpenIddictScopeStore(IConnectionMultiplexer multiplexer
         => new(new RedisOpenIddictScope());
 
     public IAsyncEnumerable<RedisOpenIddictScope> ListAsync(int? count, int? offset, CancellationToken cancellationToken)
-        => AsyncEnumerable.Empty<RedisOpenIddictScope>();
+        => RedisAsyncEnumerable.Empty<RedisOpenIddictScope>();
 
     public IAsyncEnumerable<TResult> ListAsync<TState, TResult>(Func<IQueryable<RedisOpenIddictScope>, TState, IQueryable<TResult>> query, TState state, CancellationToken cancellationToken)
-        => AsyncEnumerable.Empty<TResult>();
+        => RedisAsyncEnumerable.Empty<TResult>();
 
     public ValueTask SetDescriptionAsync(RedisOpenIddictScope scope, string? description, CancellationToken cancellationToken)
     {
