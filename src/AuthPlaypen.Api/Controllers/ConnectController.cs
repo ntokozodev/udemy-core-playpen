@@ -121,13 +121,13 @@ public class ConnectController(
                 });
             }
 
-            var identity = new ClaimsIdentity(
+            var authorizationCodeIdentity = new ClaimsIdentity(
                 authenticateResult.Principal.Claims,
                 TokenValidationParameters.DefaultAuthenticationType,
                 OpenIddictConstants.Claims.Name,
                 OpenIddictConstants.Claims.Role);
 
-            identity.SetDestinations(static claim =>
+            authorizationCodeIdentity.SetDestinations(static claim =>
                 claim.Type switch
                 {
                     OpenIddictConstants.Claims.Subject => [OpenIddictConstants.Destinations.AccessToken, OpenIddictConstants.Destinations.IdentityToken],
@@ -136,7 +136,7 @@ public class ConnectController(
                     _ => [OpenIddictConstants.Destinations.AccessToken]
                 });
 
-            return SignIn(new ClaimsPrincipal(identity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            return SignIn(new ClaimsPrincipal(authorizationCodeIdentity), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
         if (!request.IsClientCredentialsGrantType())

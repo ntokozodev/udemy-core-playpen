@@ -81,7 +81,7 @@ public sealed class AuthorizationController : Controller
             identity.SetClaim(OpenIddictConstants.Claims.Email, email);
         }
 
-        identity.SetClaim(OpenIddictConstants.Claims.IdentityProvider, "azuread");
+        identity.SetClaim(OpenIddictConstants.Claims.Private.ProviderName, "azuread");
 
         var principal = new ClaimsPrincipal(identity);
 
