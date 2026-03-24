@@ -57,9 +57,12 @@ dotnet test
 
 If a change is persistence-specific, it belongs in `AuthPlaypen.Data`.
 
-### Domain rules
+### Core domain rules to preserve
 
-Detailed behavior/rules are intentionally documented in [`docs/domain-rules.md`](./docs/domain-rules.md) so the root README stays focused on developer workflow.
+- Applications must have at least one scope.
+- Scopes can be global (`applications = []`) or app-specific.
+- Scope updates/deletes cannot orphan existing applications (zero effective scopes).
+- Redirect URI fields are valid only for `AuthorizationWithPKCE` clients.
 
 ## Where to find everything else
 
