@@ -1,242 +1,38 @@
-# dotnet-auth-playpen API
+# dotnet-auth-playpen (Developer README)
 
-ASP.NET Core 8 Web API + PostgreSQL that supports CRUD for `Application` and `Scope`.
+This README is intentionally **developer-focused** for engineers working on `AuthPlaypen.Api` and its supporting projects.
 
+For usage, integration, and deeper reference docs, use the docs index: [./docs/README.md](./docs/README.md).
 
-## Project layout
+## What this service is
 
-The solution is now organized into layered projects:
+`AuthPlaypen.Api` is an ASP.NET Core 8 auth/admin API with:
+- Admin CRUD for Applications and Scopes (PostgreSQL).
+- OpenIddict token issuance and OIDC endpoints (Redis-backed stores).
+- A bundled AdminApp frontend used to manage auth entities.
 
-- `AuthPlaypen.Api` - HTTP surface and startup/composition root only.
-- `AuthPlaypen.Application` - DTOs and application services/use-cases.
-- `AuthPlaypen.Data` - all EF Core persistence concerns.
-- `AuthPlaypen.Domain` - domain entities and enums.
-- `AuthPlaypen.OpenIddict.Redis` - Redis-backed OpenIddict store implementations and models.
-- `AuthPlaypen.ResourceApiAuth` - reusable authentication helpers for downstream resource APIs.
+## Solution layout
 
-## Strict layer ownership
+- `src/AuthPlaypen.Api` - HTTP surface, composition root, OpenIddict server wiring, AdminApp hosting.
+- `src/AuthPlaypen.Application` - DTOs and use-case orchestration.
+- `src/AuthPlaypen.Data` - EF Core `DbContext`, mappings, migrations, design-time factory.
+- `src/AuthPlaypen.Domain` - core entities and enums.
+- `src/AuthPlaypen.OpenIddict.Redis` - Redis OpenIddict stores/models.
+- `src/AuthPlaypen.ResourceApiAuth` - reusable auth package for downstream resource APIs.
+- `tests/AuthPlaypen.Api.Tests` - API test suite.
 
-This repository follows strict layer ownership:
+## Local development quick start
 
-- `AuthPlaypen.Api`
-  - Owns controllers, request/response wiring, DI registration, and host startup.
-  - Must not own persistence artifacts (no migrations, no `DbContext` factory).
-- `AuthPlaypen.Application`
-  - Owns use-case orchestration and contracts.
-  - Must not contain HTTP or EF Core infrastructure details.
-- `AuthPlaypen.Data`
-  - Owns persistence end-to-end: `DbContext`, entity mapping, design-time factory, and EF migrations.
-- `AuthPlaypen.Domain`
-  - Owns core business model and enums with no infrastructure dependencies.
-- `AuthPlaypen.OpenIddict.Redis`
-  - Owns OpenIddict Redis persistence/store infrastructure (custom stores, key/index serialization).
-- `AuthPlaypen.ResourceApiAuth`
-  - Owns reusable token-validation and authorization policy extensions for resource APIs.
-
-In short: if a change is data/persistence-specific, it belongs in `AuthPlaypen.Data`.
-
-## Domain rules implemented
-
-- Every application must reference at least one scope when created or updated.
-- A scope can be global (applies to all applications) or application-specific.
-  - `applications = []` in scope payload means **global scope**.
-  - `applications = [app1, app2]` means **scope only for those applications**.
-- Scope update/delete operations are blocked when they would leave any existing application with zero effective scopes.
-- `redirectUris` and `postLogoutRedirectUris` are only valid when `flow` is `AuthorizationWithPKCE`.
-
-## Run with Docker
+### 1) Start dependencies + API
 
 ```bash
 docker compose up --build
 ```
 
-API: `http://localhost:8080`
-Swagger UI: `http://localhost:8080/swagger`
+- API: `http://localhost:8080`
+- Swagger: `http://localhost:8080/swagger`
 
-## AdminApp frontend auth flow (feature-flagged)
-
-The admin frontend includes an `oidc-client-ts` based auth flow that is intentionally disabled by default.
-
-- `VITE_ENABLE_OIDC_AUTH=false` keeps current behavior (no enforced sign-in).
-- Set `VITE_ENABLE_OIDC_AUTH=true` to require authentication for admin routes.
-- Callback route is `/admin/auth/callback`.
-- Unauthenticated users are redirected to API/OpenIddict with PKCE (`response_type=code`).
-- OpenIddict server exposes both `/connect/authorize` and `/connect/token` for authorization code + PKCE flow.
-- OIDC scope is intentionally fixed in frontend (`openid profile`) and treated as API/OpenIddict contract, not a per-frontend env setting.
-- Frontend OIDC user state is stored in `sessionStorage` (not `localStorage`).
-- The admin app should point to **API/OpenIddict authority only** and should not target Azure directly.
-
-Runtime configuration for `src/AuthPlaypen.Api/AdminApp` is API-served by default, with an explicit local-only Vite mode fallback for isolated frontend work.
-
-## Environment strategy for QA/Staging/Live (API-served runtime config)
-
-Vite env vars are build-time and frozen in the bundle, so QA/Staging/Live should rely on `GET /app-config` at startup.
-
-### How it works
-
-- Admin frontend boots and calls `GET /app-config`.
-- API returns runtime settings from `IConfiguration`.
-- Frontend maps those values into runtime config and then starts the app.
-- In normal modes, runtime config comes from `/app-config` and overrides any build-time defaults.
-
-Server shape (implemented in `AuthConfigurationExtensions.MapAuthPlaypenInfrastructure`):
-
-```csharp
-app.MapGet("/app-config", (IConfiguration config) =>
-{
-    var enableOidcAuth = config.GetValue<bool>("AdminApp:Oidc:EnableAuth");
-    var authority = config["AdminApp:Oidc:Authority"];
-    var clientId = config["AdminApp:Oidc:ClientId"];
-    var redirectPath = config["AdminApp:Oidc:RedirectPath"];
-    var postLogoutRedirectPath = config["AdminApp:Oidc:PostLogoutRedirectPath"];
-
-    return Results.Ok(new
-    {
-        enableOidcAuth,
-        authority,
-        clientId,
-        redirectPath,
-        postLogoutRedirectPath
-    });
-});
-```
-
-### Configure staging/live on Linux server
-
-Set environment variables for the API process (systemd/container/app service), for example:
-
-```bash
-AdminApp__Oidc__EnableAuth=true
-AdminApp__Oidc__Authority=https://login.qa.example.com
-AdminApp__Oidc__ClientId=authkeeper-web-admin
-AdminApp__Oidc__RedirectPath=/auth/callback
-AdminApp__Oidc__PostLogoutRedirectPath=/
-AzureAd__TenantId=<tenant-guid-or-common>
-AzureAd__ClientId=<azure-app-client-id>
-AzureAd__ClientSecret=<azure-app-client-secret>
-AzureAd__CallbackPath=/signin-oidc
-```
-
-Use API environment variables (`AdminApp__...`) for QA/Staging/Live instead of frontend `VITE_...` values. `VITE_*` variables are build-time and become fixed in the bundled assets, while `/app-config` keeps config runtime-driven per environment.
-
-### Local mock mode (development only)
-
-Local defaults are now defined in `src/AuthPlaypen.Api/appsettings.Development.json` under `AdminApp`:
-
-```json
-"AdminApp": {
-  "Oidc": {
-    "EnableAuth": "false",
-    "Authority": "https://localhost:5100",
-    "ClientId": "authkeeper-web-admin",
-    "RedirectPath": "/auth/callback",
-    "PostLogoutRedirectPath": "/"
-  }
-}
-```
-
-For isolated frontend work (for example styling-only tasks), run the admin app with:
-
-```bash
-npm run dev:local-mock
-```
-
-This mode loads `src/AuthPlaypen.Api/AdminApp/.env.localmock` (`VITE_LOCAL_RUN_MODE=true`) and allows startup to continue when `/app-config` is unavailable, while forcing mock API usage.
-
-
-
-## OpenIddict v7 + Redis storage
-
-The API is wired to OpenIddict Core v7 using custom Redis-backed stores for:
-
-- Applications (`IOpenIddictApplicationStore`)
-- Scopes (`IOpenIddictScopeStore`)
-- Tokens (`IOpenIddictTokenStore`)
-
-Admin CRUD remains in PostgreSQL. After admin writes, the application services call sync services that upsert/delete OpenIddict entities in Redis.
-
-Configuration:
-
-- `ConnectionStrings:Postgres` for admin data
-- `ConnectionStrings:Redis` for OpenIddict stores (default `localhost:6379`)
-- `OpenIddictSigningOptions:Issuer` for issuer URI
-- `OpenIddictSigningOptions:SigningCertificatePath`/`SigningCertificatePassword` for production signing cert
-- `AzureAd:ClientId`/`AzureAd:ClientSecret`/`AzureAd:CallbackPath` for O365 interactive login bridge
-- `LocalAuth:EnableIntrospectionEndpoint` to control whether resource APIs should call introspection for fresh revocation checks
-
-The API also configures `AddServer(...)` with the standard OpenID Connect endpoints:
-
-- `/connect/authorize`
-- `/connect/token`
-- `/connect/logout`
-- `/connect/userinfo`
-- `/connect/introspect`
-- `/connect/revoke`
-
-Supported grant types include Authorization Code + PKCE and Client Credentials.
-
-Interactive Authorization Code + PKCE sign-in is wired to Azure AD/O365 as the upstream identity provider when `AzureAd:ClientId` and `AzureAd:ClientSecret` are configured.
-
-For resource APIs that require near real-time revocation checks, use `/connect/introspect` to validate token activity/status before granting access. `/connect/revoke` is available to invalidate issued tokens/authorizations.
-
-Signing credentials are loaded from `OpenIddictSigningOptions:SigningCertificatePath` when provided; otherwise a development signing certificate is used.
-
-## API contracts
-
-### ApplicationFlow
-- `ClientCredentials`
-- `AuthorizationWithPKCE`
-
-### Application payload shape
-
-```json
-{
-  "id": "guid",
-  "displayName": "Admin App",
-  "clientId": "admin-client",
-  "clientSecret": "secret",
-  "flow": "AuthorizationWithPKCE",
-  "postLogoutRedirectUris": "https://example.com/logout",
-  "redirectUris": "https://example.com/callback",
-  "scopes": [
-    {
-      "id": "guid",
-      "displayName": "Read Users",
-      "scopeName": "users.read",
-      "description": "Read user profile data"
-    }
-  ]
-}
-```
-
-### Scope payload shape
-
-```json
-{
-  "id": "guid",
-  "displayName": "Read Users",
-  "scopeName": "users.read",
-  "description": "Read user profile data",
-  "applications": []
-}
-```
-
-`applications: []` means the scope is global.
-
-## Migrations and design-time EF tooling
-
-Under strict ownership, EF Core migrations and `AuthPlaypenDbContextFactory` should live in `AuthPlaypen.Data`.
-
-Use EF commands with explicit target/startup projects:
-
-```bash
-dotnet ef migrations add <Name> \
-  --project src/AuthPlaypen.Data \
-  --startup-project src/AuthPlaypen.Api
-```
-
-`<Name>` is only needed when creating a new migration after model changes (for example, `AddUserStatusColumn`).
-If you are just running existing migrations locally, skip `migrations add` and run `database update` directly.
+### 2) Apply EF migrations (if needed)
 
 ```bash
 dotnet ef database update \
@@ -244,225 +40,35 @@ dotnet ef database update \
   --startup-project src/AuthPlaypen.Api
 ```
 
-At runtime, API remains the composition root and continues to apply migrations through `Database.Migrate()` during startup.
-
-## PKCE flow (frontend app -> Auth API/OpenIddict -> Azure AD O365 login)
-
-Auth API now supports OpenIddict authorization code + PKCE for public frontend clients registered in AdminApp (`flow = AuthorizationWithPKCE`).
-
-This repo provides:
-
-- `GET/POST /connect/authorize`
-- `POST /connect/token`
-- `GET/POST /connect/logout`
-
-### How PKCE works in this project
-
-1. Frontend redirects user to `authorize` with `response_type=code`, `code_challenge`, `code_challenge_method=S256`, `client_id`, `redirect_uri`, and scopes.
-2. Auth API checks for local auth cookie.
-3. If user is not signed in, Auth API challenges Azure AD (O365) using configured `AzureAd` settings.
-4. After O365 sign-in, Auth API issues an OpenIddict authorization code back to frontend.
-5. Frontend exchanges code + `code_verifier` at `/connect/token`.
-6. Auth API returns tokens issued by OpenIddict (issuer = `LocalAuth:Issuer`).
-
-### Required configuration for Azure AD login broker
-
-Set these values on API:
+### 3) Run tests
 
 ```bash
-AzureAd__TenantId=<tenant-id-or-common>
-AzureAd__ClientId=<entra-app-client-id>
-AzureAd__ClientSecret=<entra-app-client-secret-if-required>
-AzureAd__CallbackPath=/signin-oidc
+dotnet test
 ```
 
-The frontend authority should still point to this Auth API/OpenIddict authority, not Azure directly.
+## Team conventions for Auth API development
 
-## Client Credentials flow (Application A -> token -> external resource APIs)
+### Layer ownership (strict)
 
-Auth API acts as the token orchestrator. Resource APIs (resource-b/resource-c/resource-d/etc.) are independent services that trust tokens issued by Auth API. Client authentication and token persistence use OpenIddict Redis stores (not the SQL admin CRUD database).
+- API project owns controllers/startup/DI/composition.
+- Data project owns all persistence concerns and migrations.
+- Application project owns use-cases/contracts, not HTTP/persistence plumbing.
+- Domain project stays infra-free.
 
-This repo provides:
+If a change is persistence-specific, it belongs in `AuthPlaypen.Data`.
 
-- `POST /connect/token` (client credentials grant)
+### Core domain rules to preserve
 
-### 1) Register scopes and clients
+- Applications must have at least one scope.
+- Scopes can be global (`applications = []`) or app-specific.
+- Scope updates/deletes cannot orphan existing applications (zero effective scopes).
+- Redirect URI fields are valid only for `AuthorizationWithPKCE` clients.
 
-In AdminApp:
+## Where to find everything else
 
-- Register resource API scopes (for example: `resource-b.read`, `resource-c.write`, `resource-d.read`).
-- Create **Application A** with flow `ClientCredentials`.
-- Assign the scopes Application A is allowed to use.
-
-> Important: scopes are assigned in AdminApp and synchronized to OpenIddict application permissions. Token requests do not need a `scope` parameter, and `/connect/token` resolves scopes from OpenIddict stores.
-
-### Token validation model for resource APIs
-
-Resource APIs should **not** know or store Application A's client secret. They only validate bearer tokens and enforce required scopes/claims.
-
-In this architecture, signing keys are provided like this:
-
-- Auth API keeps the **private signing key** internally and never shares it with resource APIs.
-- Resource APIs download **public keys** from Auth API discovery metadata (`/.well-known/openid-configuration`) and the referenced `jwks_uri`.
-- In this project's local setup, discovery is served by Auth API at `https://localhost:5100/.well-known/openid-configuration` (same host as `/connect/token`, not under `/api`).
-- JWT middleware caches metadata/JWKS automatically, so high-traffic APIs can validate tokens locally (signature, issuer, audience, expiry, scopes) without calling introspection on every request.
-- When Auth API rotates keys, resource APIs refresh JWKS and continue validating with the new public keys.
-
-Example resource API setup (local JWT validation):
-
-```csharp
-services.AddAuthentication("Bearer")
-    .AddJwtBearer("Bearer", options =>
-    {
-        options.Authority = "https://auth-api.example.com";
-        options.Audience = "resource-b";
-        options.RequireHttpsMetadata = true;
-    });
-```
-
-Introspection remains optional:
-
-- Use local JWT validation by default for performance and independence from Auth API at request time.
-- Add introspection for APIs that require near-real-time revocation checks.
-
-### Dedicated note: when resource APIs must call `/connect/introspect`
-
-If a resource API needs near real-time revocation checks (for example, access should stop immediately after token revocation), configure the API to use introspection mode and call Auth API's introspection endpoint:
-
-- Endpoint: `POST /connect/introspect`
-- Typical trigger: high-security APIs that prioritize immediate revocation over lowest-latency local-only validation.
-- Tradeoff: each validation may depend on Auth API availability/latency (often mitigated with short caching).
-
-If near real-time revocation is **not** required, keep JWT local validation mode so resource APIs validate tokens from discovery/JWKS without per-request introspection calls.
-
-| Mode | Calls Auth API on each token check | Revocation freshness | Latency profile | Recommended use |
-|---|---|---|---|---|
-| `Jwt` | No (local validation after metadata/JWKS fetch & cache) | Eventual (depends on token lifetime and key/metadata refresh) | Lowest per-request latency | Default for most resource APIs |
-| `Introspection` | Yes (`POST /connect/introspect`, often with short result caching) | Near real-time | Higher and dependent on Auth API availability | High-security endpoints that need immediate revocation awareness |
-
-### Reusable package for resource APIs
-
-Yes. A shared NuGet package is a good fit and can expose a single extension method (for example `AddAuthApiJwtValidation(...)`) that:
-
-- Configures JWT bearer validation (`Authority`, `Audience`, issuer validation, lifetime validation).
-- Validates required scopes consistently (policy helpers/authorization handlers).
-- Uses OpenID Connect discovery + JWKS retrieval/caching for local verification at scale.
-- Optionally enables introspection using `Duende.AspNetCore.Authentication.OAuth2Introspection` for services that need active-token checks.
-
-This keeps each resource API lightweight while centralizing the token validation contract with Auth API.
-
-### Implemented in this repository
-
-#### Auth API discovery/JWKS/introspection endpoints
-
-`AuthPlaypen.Api` now explicitly exposes OpenID metadata/JWKS endpoints and optional introspection:
-
-- `/.well-known/openid-configuration`
-- `/.well-known/jwks`
-- `/connect/token`
-- `/connect/introspect` (only when `LocalAuth:EnableIntrospectionEndpoint=true`)
-
-#### Reusable NuGet package (resource APIs)
-
-A reusable package project was added at `src/AuthPlaypen.ResourceApiAuth`.
-
-- Package ID: `AuthPlaypen.ResourceApiAuth`
-- Main extension: `services.AddAuthApiResourceAuthentication(...)`
-- Validation mode switch: `AuthApiTokenValidationMode.Jwt` (default) or `AuthApiTokenValidationMode.Introspection`
-- Scope policy helper: `RequireAnyScope(...)`
-
-Example usage in a resource API (registration + runtime enforcement):
-
-```csharp
-using AuthPlaypen.ResourceApiAuth;
-using Microsoft.AspNetCore.Authorization;
-
-builder.Services.AddAuthApiResourceAuthentication(options =>
-{
-    // optional: defaults to https://localhost:5100
-    // options.Authority = "https://localhost:5100";
-    options.Audience = "resource-b";
-    options.ValidationMode = AuthApiTokenValidationMode.Jwt; // or Introspection
-
-    // required when ValidationMode = Introspection
-    options.IntrospectionClientId = "resource-b-introspection";
-    options.IntrospectionClientSecret = "change-me";
-});
-
-builder.Services.AddAuthorization(options =>
-{
-    // exact scope requirement for a specific endpoint
-    options.AddPolicy("orders.read", policy =>
-        policy.RequireAuthenticatedUser().RequireAnyScope("resource-b.orders.read"));
-
-    // one endpoint can allow multiple scopes (logical OR)
-    options.AddPolicy("orders.write", policy =>
-        policy.RequireAuthenticatedUser().RequireAnyScope(
-            "resource-b.orders.write",
-            "resource-b.orders.admin"));
-});
-
-var app = builder.Build();
-
-app.UseAuthentication();
-app.UseAuthorization();
-
-app.MapGet("/orders", [Authorize(Policy = "orders.read")] () => Results.Ok("read ok"));
-app.MapPost("/orders", [Authorize(Policy = "orders.write")] () => Results.Ok("write ok"));
-```
-
-Notes:
-- `Authority` is optional in this package and defaults to `https://localhost:5100`.
-- `RequireAnyScope(...)` is **OR** logic: if the token has any listed scope, authorization passes.
-- If you need **AND** logic (must have multiple scopes), define a custom policy/handler or chain explicit assertions.
-- `AuthApiTokenValidationMode.Introspection` in this package is backed by `Duende.AspNetCore.Authentication.OAuth2Introspection`.
-
-### 2) Request token from Application A
-
-```bash
-curl -X POST "http://localhost:8080/connect/token" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "client_id=<application-a-client-id>" \
-  -d "client_secret=<application-a-client-secret>"
-```
-
-Response contains:
-
-- `access_token`
-- `token_type` (`Bearer`)
-- `expires_in`
-- `scope` (all scopes assigned to the client)
-
-### 3) Call any external resource API with bearer token
-
-```bash
-curl "https://resource-b.example.com/api/orders" \
-  -H "Authorization: Bearer <access_token>"
-```
-
-### OpenIddict idiomatic token endpoint notes
-
-`POST /connect/token` is implemented as an OpenIddict server passthrough endpoint:
-
-- OpenIddict server is configured with `AllowClientCredentialsFlow()` and token endpoint URI `/connect/token`.
-- Controller reads `HttpContext.GetOpenIddictServerRequest()` and returns `SignIn(..., OpenIddictServerAspNetCoreDefaults.AuthenticationScheme)`.
-- Client and scope permissions are resolved from OpenIddict application permissions synced by AdminApp.
-
-This keeps behavior close to OpenIddict defaults while still allowing custom checks when needed.
-
-### How each external API validates token from Application A
-
-When `Application A` uses its own `client_id/client_secret`, it authenticates to Auth API (token issuer). The resulting JWT is then sent to resource APIs.
-
-Each resource API validates the JWT by checking:
-
-> A scope-authorization middleware on each resource API is a good place to enforce that token scopes are allowed for that client/application.
-
-
-1. **Signature** using the issuer signing key.
-2. **Issuer** (`iss`) matches trusted Auth API issuer.
-3. **Audience** (`aud`) matches expected audience.
-4. **Expiry** (`exp`) and token lifetime claims.
-5. **Scope claims** contain the permission(s) that API endpoint requires.
-
-So resource APIs never need Application A's secret. They only trust the token issuer and enforce their own required scopes.
+- Architecture + boundaries: [docs/architecture.md](./docs/architecture.md)
+- Domain rules: [docs/domain-rules.md](./docs/domain-rules.md)
+- Runtime/AdminApp configuration: [docs/runtime-configuration.md](./docs/runtime-configuration.md)
+- OpenIddict endpoints + token flows: [docs/openiddict-and-flows.md](./docs/openiddict-and-flows.md)
+- API payload contracts: [docs/api-contracts.md](./docs/api-contracts.md)
+- Resource API integration package usage: [docs/resource-api-integration.md](./docs/resource-api-integration.md)
