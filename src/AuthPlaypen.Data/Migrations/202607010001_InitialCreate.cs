@@ -1,10 +1,14 @@
 using System;
+using AuthPlaypen.Data.Data;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
 namespace AuthPlaypen.Data.Migrations;
 
+[DbContext(typeof(AuthPlaypenDbContext))]
+[Migration("202607010001_InitialCreate")]
 public partial class InitialCreate : Migration
 {
     protected override void Up(MigrationBuilder migrationBuilder)
