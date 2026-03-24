@@ -12,6 +12,7 @@ The solution is now organized into layered projects:
 - `AuthPlaypen.Data` - all EF Core persistence concerns.
 - `AuthPlaypen.Domain` - domain entities and enums.
 - `AuthPlaypen.OpenIddict.Redis` - Redis-backed OpenIddict store implementations and models.
+- `AuthPlaypen.ResourceApiAuth` - reusable authentication helpers for downstream resource APIs.
 
 ## Strict layer ownership
 
@@ -29,6 +30,8 @@ This repository follows strict layer ownership:
   - Owns core business model and enums with no infrastructure dependencies.
 - `AuthPlaypen.OpenIddict.Redis`
   - Owns OpenIddict Redis persistence/store infrastructure (custom stores, key/index serialization).
+- `AuthPlaypen.ResourceApiAuth`
+  - Owns reusable token-validation and authorization policy extensions for resource APIs.
 
 In short: if a change is data/persistence-specific, it belongs in `AuthPlaypen.Data`.
 
