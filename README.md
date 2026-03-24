@@ -57,13 +57,6 @@ dotnet test
 
 If a change is persistence-specific, it belongs in `AuthPlaypen.Data`.
 
-### Core domain rules to preserve
-
-- Applications must have at least one scope.
-- Scopes can be global (`applications = []`) or app-specific.
-- Scope updates/deletes cannot orphan existing applications (zero effective scopes).
-- Redirect URI fields are valid only for `AuthorizationWithPKCE` clients.
-
 ## Where to find everything else
 
 - Architecture + boundaries: [docs/architecture.md](./docs/architecture.md)
