@@ -325,6 +325,16 @@ Introspection remains optional:
 - Use local JWT validation by default for performance and independence from Auth API at request time.
 - Add introspection for APIs that require near-real-time revocation checks.
 
+### Dedicated note: when resource APIs must call `/connect/introspect`
+
+If a resource API needs near real-time revocation checks (for example, access should stop immediately after token revocation), configure the API to use introspection mode and call Auth API's introspection endpoint:
+
+- Endpoint: `POST /connect/introspect`
+- Typical trigger: high-security APIs that prioritize immediate revocation over lowest-latency local-only validation.
+- Tradeoff: each validation may depend on Auth API availability/latency (often mitigated with short caching).
+
+If near real-time revocation is **not** required, keep JWT local validation mode so resource APIs validate tokens from discovery/JWKS without per-request introspection calls.
+
 ### Reusable package for resource APIs
 
 Yes. A shared NuGet package is a good fit and can expose a single extension method (for example `AddAuthApiJwtValidation(...)`) that:
