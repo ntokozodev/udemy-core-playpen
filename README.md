@@ -232,6 +232,9 @@ dotnet ef migrations add <Name> \
   --startup-project src/AuthPlaypen.Api
 ```
 
+`<Name>` is only needed when creating a new migration after model changes (for example, `AddUserStatusColumn`).
+If you are just running existing migrations locally, skip `migrations add` and run `database update` directly.
+
 ```bash
 dotnet ef database update \
   --project src/AuthPlaypen.Data \
