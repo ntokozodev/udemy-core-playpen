@@ -1,4 +1,4 @@
-# dotnet-auth-playpen (Developer README)
+# dotnet-auth-playpen
 
 This README is intentionally **developer-focused** for engineers working on `AuthPlaypen.Api` and its supporting projects.
 
