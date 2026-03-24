@@ -12,6 +12,7 @@ The solution is now organized into layered projects:
 - `AuthPlaypen.Data` - all EF Core persistence concerns.
 - `AuthPlaypen.Domain` - domain entities and enums.
 - `AuthPlaypen.OpenIddict.Redis` - Redis-backed OpenIddict store implementations and models.
+- `AuthPlaypen.ResourceApiAuth` - reusable authentication helpers for downstream resource APIs.
 
 ## Strict layer ownership
 
@@ -29,6 +30,8 @@ This repository follows strict layer ownership:
   - Owns core business model and enums with no infrastructure dependencies.
 - `AuthPlaypen.OpenIddict.Redis`
   - Owns OpenIddict Redis persistence/store infrastructure (custom stores, key/index serialization).
+- `AuthPlaypen.ResourceApiAuth`
+  - Owns reusable token-validation and authorization policy extensions for resource APIs.
 
 In short: if a change is data/persistence-specific, it belongs in `AuthPlaypen.Data`.
 
@@ -320,7 +323,22 @@ services.AddAuthentication("Bearer")
 Introspection remains optional:
 
 - Use local JWT validation by default for performance and independence from Auth API at request time.
-- Add introspection only for APIs that require near-real-time revocation checks.
+- Add introspection for APIs that require near-real-time revocation checks.
+
+### Dedicated note: when resource APIs must call `/connect/introspect`
+
+If a resource API needs near real-time revocation checks (for example, access should stop immediately after token revocation), configure the API to use introspection mode and call Auth API's introspection endpoint:
+
+- Endpoint: `POST /connect/introspect`
+- Typical trigger: high-security APIs that prioritize immediate revocation over lowest-latency local-only validation.
+- Tradeoff: each validation may depend on Auth API availability/latency (often mitigated with short caching).
+
+If near real-time revocation is **not** required, keep JWT local validation mode so resource APIs validate tokens from discovery/JWKS without per-request introspection calls.
+
+| Mode | Calls Auth API on each token check | Revocation freshness | Latency profile | Recommended use |
+|---|---|---|---|---|
+| `Jwt` | No (local validation after metadata/JWKS fetch & cache) | Eventual (depends on token lifetime and key/metadata refresh) | Lowest per-request latency | Default for most resource APIs |
+| `Introspection` | Yes (`POST /connect/introspect`, often with short result caching) | Near real-time | Higher and dependent on Auth API availability | High-security endpoints that need immediate revocation awareness |
 
 ### Reusable package for resource APIs
 
@@ -329,7 +347,7 @@ Yes. A shared NuGet package is a good fit and can expose a single extension meth
 - Configures JWT bearer validation (`Authority`, `Audience`, issuer validation, lifetime validation).
 - Validates required scopes consistently (policy helpers/authorization handlers).
 - Uses OpenID Connect discovery + JWKS retrieval/caching for local verification at scale.
-- Optionally enables introspection as a feature flag for services that need active-token checks.
+- Optionally enables introspection using `Duende.AspNetCore.Authentication.OAuth2Introspection` for services that need active-token checks.
 
 This keeps each resource API lightweight while centralizing the token validation contract with Auth API.
 
@@ -397,6 +415,7 @@ Notes:
 - `Authority` is optional in this package and defaults to `https://localhost:5100`.
 - `RequireAnyScope(...)` is **OR** logic: if the token has any listed scope, authorization passes.
 - If you need **AND** logic (must have multiple scopes), define a custom policy/handler or chain explicit assertions.
+- `AuthApiTokenValidationMode.Introspection` in this package is backed by `Duende.AspNetCore.Authentication.OAuth2Introspection`.
 
 ### 2) Request token from Application A
 

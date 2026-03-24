@@ -1,4 +1,4 @@
-using IdentityModel.AspNetCore.OAuth2Introspection;
+using Duende.AspNetCore.Authentication.OAuth2Introspection;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -70,5 +70,6 @@ public static class ServiceCollectionExtensions
                 throw new InvalidOperationException("IntrospectionClientSecret is required when ValidationMode is Introspection.");
             }
         }
+
     }
 }
