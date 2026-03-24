@@ -57,20 +57,9 @@ dotnet test
 
 If a change is persistence-specific, it belongs in `AuthPlaypen.Data`.
 
-### Core rules (current implementation)
+### Domain rules
 
-- `Application.ClientId` must be unique (service + DB unique index).
-- `Scope.ScopeName` must be unique (service + DB unique index).
-- `redirectUris` and `postLogoutRedirectUris` are only allowed for `AuthorizationWithPKCE` applications.
-- Relationship references are validated on writes:
-  - `scopeIds` for Application create/update must all exist.
-  - `applicationIds` for Scope create/update must all exist.
-- Scope assignment rules for Application create/update:
-  - Global scopes are always assignable (`applications = []`).
-  - App-specific scopes are assignable only when the scope already contains that application ID.
-  - Practical implication: during **Application create**, app-specific scopes are typically not assignable yet because the new application ID does not already exist on the scope.
-- There is currently no rule enforcing at least one scope per application.
-- Scope delete is not blocked for orphan prevention; linked `application_scopes` rows are removed and the scope is deleted.
+Detailed behavior/rules are intentionally documented in [`docs/domain-rules.md`](./docs/domain-rules.md) so the root README stays focused on developer workflow.
 
 ## Where to find everything else
 
