@@ -320,10 +320,7 @@ services.AddAuthentication("Bearer")
     });
 ```
 
-Introspection remains optional:
-
-- Use local JWT validation by default for performance and independence from Auth API at request time.
-- Add introspection only for APIs that require near-real-time revocation checks.
+For the reusable `AuthPlaypen.ResourceApiAuth` package, local JWT validation is the supported mode.
 
 ### Reusable package for resource APIs
 
@@ -332,7 +329,7 @@ Yes. A shared NuGet package is a good fit and can expose a single extension meth
 - Configures JWT bearer validation (`Authority`, `Audience`, issuer validation, lifetime validation).
 - Validates required scopes consistently (policy helpers/authorization handlers).
 - Uses OpenID Connect discovery + JWKS retrieval/caching for local verification at scale.
-- Optionally enables introspection as a feature flag for services that need active-token checks.
+- Keeps validation behavior centralized so future enhancements (including alternatives to legacy introspection packages) can be rolled out consistently.
 
 This keeps each resource API lightweight while centralizing the token validation contract with Auth API.
 
@@ -353,7 +350,7 @@ A reusable package project was added at `src/AuthPlaypen.ResourceApiAuth`.
 
 - Package ID: `AuthPlaypen.ResourceApiAuth`
 - Main extension: `services.AddAuthApiResourceAuthentication(...)`
-- Validation mode switch: `AuthApiTokenValidationMode.Jwt` (default) or `AuthApiTokenValidationMode.Introspection`
+- Validation mode: `AuthApiTokenValidationMode.Jwt` (supported)
 - Scope policy helper: `RequireAnyScope(...)`
 
 Example usage in a resource API (registration + runtime enforcement):
@@ -367,11 +364,7 @@ builder.Services.AddAuthApiResourceAuthentication(options =>
     // optional: defaults to https://localhost:5100
     // options.Authority = "https://localhost:5100";
     options.Audience = "resource-b";
-    options.ValidationMode = AuthApiTokenValidationMode.Jwt; // or Introspection
-
-    // required when ValidationMode = Introspection
-    options.IntrospectionClientId = "resource-b-introspection";
-    options.IntrospectionClientSecret = "change-me";
+    options.ValidationMode = AuthApiTokenValidationMode.Jwt;
 });
 
 builder.Services.AddAuthorization(options =>
@@ -400,6 +393,7 @@ Notes:
 - `Authority` is optional in this package and defaults to `https://localhost:5100`.
 - `RequireAnyScope(...)` is **OR** logic: if the token has any listed scope, authorization passes.
 - If you need **AND** logic (must have multiple scopes), define a custom policy/handler or chain explicit assertions.
+- `AuthApiTokenValidationMode.Introspection` is intentionally unsupported in this package because `IdentityModel.AspNetCore.OAuth2Introspection` is archived/unmaintained.
 
 ### 2) Request token from Application A
 

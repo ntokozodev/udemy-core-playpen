@@ -5,7 +5,6 @@ Shared authentication helpers for resource APIs that validate access tokens issu
 ## Features
 
 - Local JWT validation via OIDC discovery/JWKS.
-- Optional introspection mode for APIs that need active-token checks.
 - Scope policy helper (`RequireAnyScope`).
 
 ## Example (registration + runtime enforcement)
@@ -19,11 +18,7 @@ builder.Services.AddAuthApiResourceAuthentication(options =>
     // optional: defaults to https://localhost:5100
     // options.Authority = "https://localhost:5100";
     options.Audience = "resource-b";
-    options.ValidationMode = AuthApiTokenValidationMode.Jwt; // or Introspection
-
-    // required when ValidationMode = Introspection
-    options.IntrospectionClientId = "resource-b-introspection";
-    options.IntrospectionClientSecret = "change-me";
+    options.ValidationMode = AuthApiTokenValidationMode.Jwt;
 });
 
 builder.Services.AddAuthorization(options =>
@@ -50,3 +45,6 @@ app.MapPost("/orders", [Authorize(Policy = "orders.write")] () => Results.Ok("wr
 
 
 `Authority` is optional in this package and defaults to `https://localhost:5100`. Override it only if your Auth API host differs.
+
+> Note: `AuthApiTokenValidationMode.Introspection` is intentionally unsupported in this package because
+> `IdentityModel.AspNetCore.OAuth2Introspection` is archived/unmaintained.
