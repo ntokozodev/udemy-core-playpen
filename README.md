@@ -335,6 +335,11 @@ If a resource API needs near real-time revocation checks (for example, access sh
 
 If near real-time revocation is **not** required, keep JWT local validation mode so resource APIs validate tokens from discovery/JWKS without per-request introspection calls.
 
+| Mode | Calls Auth API on each token check | Revocation freshness | Latency profile | Recommended use |
+|---|---|---|---|---|
+| `Jwt` | No (local validation after metadata/JWKS fetch & cache) | Eventual (depends on token lifetime and key/metadata refresh) | Lowest per-request latency | Default for most resource APIs |
+| `Introspection` | Yes (`POST /connect/introspect`, often with short result caching) | Near real-time | Higher and dependent on Auth API availability | High-security endpoints that need immediate revocation awareness |
+
 ### Reusable package for resource APIs
 
 Yes. A shared NuGet package is a good fit and can expose a single extension method (for example `AddAuthApiJwtValidation(...)`) that:
