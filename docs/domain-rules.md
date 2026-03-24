@@ -30,8 +30,6 @@ This page reflects the current behavior in `ApplicationService` and `ScopeServic
 - Practical implication for create:
   - a newly created application usually cannot be assigned app-specific scopes in the same create request, because those scopes cannot already reference the not-yet-existing application ID.
 
-## Not currently enforced
+## Scope delete behavior
 
-- No invariant currently forces an application to have at least one scope.
-- No invariant currently blocks scope update/delete based on possible downstream orphaning behavior.
 - Scope delete currently removes link rows (`ApplicationScopes`) and then deletes the scope.
