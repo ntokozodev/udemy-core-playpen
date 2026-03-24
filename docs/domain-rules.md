@@ -34,3 +34,4 @@ This page reflects the current behavior in `ApplicationService` and `ScopeServic
 
 - No invariant currently forces an application to have at least one scope.
 - No invariant currently blocks scope update/delete based on possible downstream orphaning behavior.
+- Scope delete currently removes link rows (`ApplicationScopes`) and then deletes the scope.

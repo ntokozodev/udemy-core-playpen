@@ -70,6 +70,7 @@ If a change is persistence-specific, it belongs in `AuthPlaypen.Data`.
   - App-specific scopes are assignable only when the scope already contains that application ID.
   - Practical implication: during **Application create**, app-specific scopes are typically not assignable yet because the new application ID does not already exist on the scope.
 - There is currently no rule enforcing at least one scope per application.
+- Scope delete is not blocked for orphan prevention; linked `application_scopes` rows are removed and the scope is deleted.
 
 ## Where to find everything else
 
