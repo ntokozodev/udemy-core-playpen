@@ -4,3 +4,23 @@
   --color-brand-dark: #071341;
   --color-brand-accent: #00f2ff;
 }
+
+:root {
+  --app-bg: #f3f4f6;
+  --panel-bg: #ffffff;
+  --panel-bg-hover: #f9fafb;
+  --header-bg: #071341;
+  --header-text: #ffffff;
+  --text-primary: #111827;
+  --control-border: #d1d5db;
+}
+
+[data-theme="dark"] {
+  --app-bg: #030712;
+  --panel-bg: #111827;
+  --panel-bg-hover: #1f2937;
+  --header-bg: #020617;
+  --header-text: #e5e7eb;
+  --text-primary: #e5e7eb;
+  --control-border: #374151;
+}
