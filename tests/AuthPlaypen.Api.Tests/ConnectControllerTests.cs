@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Moq;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
+using Xunit;
 
 namespace AuthPlaypen.Api.Tests;
 

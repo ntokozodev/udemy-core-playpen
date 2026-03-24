@@ -4,6 +4,7 @@ using AuthPlaypen.Application.Services;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using Xunit;
 
 namespace AuthPlaypen.Api.Tests;
 

@@ -81,7 +81,7 @@ public class ConnectController(
             identity.SetClaim(OpenIddictConstants.Claims.Email, email);
         }
 
-        var requestedScopes = request.GetScopes().ToArray();
+        var requestedScopes = request.GetScopes();
         identity.SetScopes(requestedScopes);
         var resources = new List<string>();
         await foreach (var resource in scopeManager.ListResourcesAsync(requestedScopes, cancellationToken))
