@@ -1,10 +1,35 @@
-# Domain Rules
+# Domain Rules (Current Implementation)
 
-## Application/Scope invariants
+This page reflects the current behavior in `ApplicationService` and `ScopeService`.
 
-- Every Application must reference at least one Scope during create/update.
-- A Scope can be:
-  - Global (`applications = []`), or
-  - Application-specific (`applications = [app1, app2]`).
-- Scope update/delete operations are blocked if they would leave any existing application with zero effective scopes.
-- `redirectUris` and `postLogoutRedirectUris` are only valid for `AuthorizationWithPKCE` applications.
+## Uniqueness
+
+- `Application.ClientId` must be unique.
+- `Scope.ScopeName` must be unique.
+- Uniqueness is enforced in services and backed by DB unique indexes.
+
+## Relationship ID validation
+
+- Application create/update validates `scopeIds`:
+  - every referenced scope ID must exist.
+- Scope create/update validates `applicationIds`:
+  - every referenced application ID must exist.
+
+## Flow/URI validation
+
+- `redirectUris` and `postLogoutRedirectUris` are only allowed when `flow = AuthorizationWithPKCE`.
+
+## Scope assignment behavior (as implemented)
+
+- Scope globalness is derived (`IsGlobal`) from links:
+  - no `ApplicationScopes` links => global scope
+  - one or more links => app-specific scope
+- During Application create/update:
+  - global scopes are assignable
+  - app-specific scopes are assignable only if they already link to that application ID
+- Practical implication for create:
+  - a newly created application usually cannot be assigned app-specific scopes in the same create request, because those scopes cannot already reference the not-yet-existing application ID.
+
+## Scope delete behavior
+
+- Scope delete currently removes link rows (`ApplicationScopes`) and then deletes the scope.
