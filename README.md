@@ -46,6 +46,25 @@ dotnet ef database update \
 dotnet test
 ```
 
+### 4) Generate a self-signed certificate for local HTTPS (optional but recommended)
+
+If you want to run the API locally over HTTPS (for OIDC callback/issuer scenarios), create and trust the ASP.NET Core development certificate:
+
+```bash
+dotnet dev-certs https --clean
+dotnet dev-certs https --trust
+```
+
+Then run the API with an HTTPS URL:
+
+```bash
+ASPNETCORE_URLS="https://localhost:5100;http://localhost:8080" dotnet run --project src/AuthPlaypen.Api
+```
+
+Notes:
+- `docker compose up --build` maps HTTP on `http://localhost:8080` by default.
+- The dev cert above is for host-local `dotnet run` workflows.
+
 ## Team conventions for Auth API development
 
 ### Layer ownership (strict)
