@@ -4,6 +4,19 @@
 
 For usage, integration, and deeper reference docs, use the docs index: [./docs/README.md](./docs/README.md).
 
+## Table of Contents
+
+- [What this service is](#what-this-service-is)
+- [Solution layout](#solution-layout)
+- [Local development quick start](#local-development-quick-start)
+  - [1) Generate a local OpenIddict signing certificate (server-like setup)](#1-generate-a-local-openiddict-signing-certificate-server-like-setup)
+  - [2) Start dependencies + API](#2-start-dependencies--api)
+  - [3) Apply EF migrations (if needed)](#3-apply-ef-migrations-if-needed)
+  - [4) Run tests](#4-run-tests)
+- [Team conventions for Auth API development](#team-conventions-for-auth-api-development)
+  - [Layer ownership (strict)](#layer-ownership-strict)
+- [Where to find everything else](#where-to-find-everything-else)
+
 ## What this service is
 
 `AuthPlaypen.Api` is an ASP.NET Core 8 auth/admin API with:
