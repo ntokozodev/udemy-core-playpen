@@ -23,24 +23,47 @@ For usage, integration, and deeper reference docs, use the docs index: [./docs/R
 
 ## Local development quick start
 
-### 1) Generate a self-signed certificate for local HTTPS (optional but recommended)
+### 1) Generate a local OpenIddict signing certificate (server-like setup)
 
-If you want to run the API locally over HTTPS (for OIDC callback/issuer scenarios), create and trust the ASP.NET Core development certificate:
+To mimic production/server behavior, create a real `.pfx` signing certificate and wire it via:
+
+- `OpenIddictSigningOptions:SigningCertificatePath`
+- `OpenIddictSigningOptions:SigningCertificatePassword`
+
+Example using OpenSSL:
 
 ```bash
-dotnet dev-certs https --clean
-dotnet dev-certs https --trust
+mkdir -p .certs
+openssl req -x509 -newkey rsa:2048 -sha256 -days 365 -nodes \
+  -keyout .certs/authplaypen-signing.key \
+  -out .certs/authplaypen-signing.crt \
+  -subj "/CN=authplaypen.local"
+openssl pkcs12 -export \
+  -out .certs/authplaypen-signing.pfx \
+  -inkey .certs/authplaypen-signing.key \
+  -in .certs/authplaypen-signing.crt \
+  -passout pass:"changeit-dev-only"
 ```
 
-Then run the API with an HTTPS URL:
+Store path/password in user-secrets (instead of committing them in `appsettings*.json`):
 
 ```bash
+dotnet user-secrets init --project src/AuthPlaypen.Api
+dotnet user-secrets set "OpenIddictSigningOptions:SigningCertificatePath" "$(pwd)/.certs/authplaypen-signing.pfx" --project src/AuthPlaypen.Api
+dotnet user-secrets set "OpenIddictSigningOptions:SigningCertificatePassword" "changeit-dev-only" --project src/AuthPlaypen.Api
+```
+
+Optional (TLS for browser/OIDC callbacks when running on host):
+
+```bash
+dotnet dev-certs https --trust
 ASPNETCORE_URLS="https://localhost:5100;http://localhost:8080" dotnet run --project src/AuthPlaypen.Api
 ```
 
 Notes:
-- `docker compose up --build` maps HTTP on `http://localhost:8080` by default.
-- The dev cert above is for host-local `dotnet run` workflows.
+- If `SigningCertificatePath` is empty, the API falls back to `AddDevelopmentSigningCertificate()`.
+- `docker compose up --build` still maps HTTP on `http://localhost:8080` by default.
+- Keep `.certs/` local-only (do not commit private keys/certificates).
 
 ### 2) Start dependencies + API
 
