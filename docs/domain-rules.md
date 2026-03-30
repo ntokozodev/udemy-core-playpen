@@ -1,5 +1,8 @@
 # Domain Rules (Current Implementation)
 
+[← Back to docs index](./README.md)
+
+
 This page reflects the current behavior in `ApplicationService` and `ScopeService`.
 
 ## Uniqueness

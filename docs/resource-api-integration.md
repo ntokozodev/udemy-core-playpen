@@ -1,5 +1,8 @@
 # Resource API Integration
 
+[← Back to docs index](./README.md)
+
+
 ## Validation model
 
 Resource APIs should validate bearer tokens; they should not store client secrets for calling applications.

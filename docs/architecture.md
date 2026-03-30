@@ -1,5 +1,8 @@
 # Architecture and Layer Ownership
 
+[← Back to docs index](./README.md)
+
+
 ## Projects
 
 - `AuthPlaypen.Api` - HTTP surface + startup/composition root.
