@@ -104,7 +104,7 @@ public class ServiceCollectionExtensionsTests
         introspectionOptions.ClientId.Should().Be("resource-client");
         introspectionOptions.ClientSecret.Should().Be("secret");
         introspectionOptions.IntrospectionEndpoint.Should().Be("/custom/introspect");
-        introspectionOptions.EnableCaching.Should().BeTrue();
+        introspectionOptions.SaveToken.Should().BeTrue();
         introspectionOptions.CacheDuration.Should().Be(TimeSpan.FromMinutes(2));
         introspectionOptions.NameClaimType.Should().Be("sub");
         introspectionOptions.RoleClaimType.Should().Be("role");
