@@ -23,30 +23,7 @@ For usage, integration, and deeper reference docs, use the docs index: [./docs/R
 
 ## Local development quick start
 
-### 1) Start dependencies + API
-
-```bash
-docker compose up --build
-```
-
-- API: `http://localhost:8080`
-- Swagger: `http://localhost:8080/swagger`
-
-### 2) Apply EF migrations (if needed)
-
-```bash
-dotnet ef database update \
-  --project src/AuthPlaypen.Data \
-  --startup-project src/AuthPlaypen.Api
-```
-
-### 3) Run tests
-
-```bash
-dotnet test
-```
-
-### 4) Generate a self-signed certificate for local HTTPS (optional but recommended)
+### 1) Generate a self-signed certificate for local HTTPS (optional but recommended)
 
 If you want to run the API locally over HTTPS (for OIDC callback/issuer scenarios), create and trust the ASP.NET Core development certificate:
 
@@ -64,6 +41,29 @@ ASPNETCORE_URLS="https://localhost:5100;http://localhost:8080" dotnet run --proj
 Notes:
 - `docker compose up --build` maps HTTP on `http://localhost:8080` by default.
 - The dev cert above is for host-local `dotnet run` workflows.
+
+### 2) Start dependencies + API
+
+```bash
+docker compose up --build
+```
+
+- API: `http://localhost:8080`
+- Swagger: `http://localhost:8080/swagger`
+
+### 3) Apply EF migrations (if needed)
+
+```bash
+dotnet ef database update \
+  --project src/AuthPlaypen.Data \
+  --startup-project src/AuthPlaypen.Api
+```
+
+### 4) Run tests
+
+```bash
+dotnet test
+```
 
 ## Team conventions for Auth API development
 
