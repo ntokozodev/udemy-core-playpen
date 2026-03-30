@@ -7,6 +7,7 @@ Shared authentication helpers for resource APIs that validate access tokens issu
 - Local JWT validation via OIDC discovery/JWKS.
 - Optional introspection mode for APIs that need active-token checks.
 - Scope policy helper (`RequireAnyScope`).
+- Auth API client wrapper (`IAuthApiClient`) for token + introspection endpoints.
 
 ## Example (registration + runtime enforcement)
 
@@ -50,6 +51,40 @@ app.MapPost("/orders", [Authorize(Policy = "orders.write")] () => Results.Ok("wr
 
 
 `Authority` is optional in this package and defaults to `https://localhost:5100`. Override it only if your Auth API host differs.
+
+## Auth API SDK-style client wrapper
+
+This library also includes an easy-to-use client wrapper for common Auth API endpoints:
+
+- `POST /connect/token` (client credentials token issuance)
+- `POST /connect/introspect` (opaque token introspection)
+
+Register it:
+
+```csharp
+builder.Services.AddAuthApiClient(options =>
+{
+    options.Authority = "https://localhost:5100";
+    options.ClientId = "resource-b-introspection";
+    options.ClientSecret = "change-me";
+});
+```
+
+Use it:
+
+```csharp
+public class TokenService(IAuthApiClient authApiClient)
+{
+    public async Task<string> GetAccessTokenAsync(CancellationToken ct)
+    {
+        var token = await authApiClient.RequestClientCredentialsTokenAsync(
+            ["resource-b.orders.read"],
+            ct);
+
+        return token.AccessToken;
+    }
+}
+```
 
 ## Publishing to NuGet (or another package feed)
 
