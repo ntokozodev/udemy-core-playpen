@@ -42,15 +42,18 @@ openssl pkcs12 -export \
   -out .certs/authplaypen-signing.pfx \
   -inkey .certs/authplaypen-signing.key \
   -in .certs/authplaypen-signing.crt \
-  -passout pass:"changeit-dev-only"
+  -passout pass:"<your-dev-cert-password>"
 ```
 
 Store path/password in user-secrets (instead of committing them in `appsettings*.json`):
 
+Use any local development password you prefer (for example, `changeit-dev-only`).
+That string is just a sample placeholder, not a required built-in password.
+
 ```bash
 dotnet user-secrets init --project src/AuthPlaypen.Api
 dotnet user-secrets set "OpenIddictSigningOptions:SigningCertificatePath" "$(pwd)/.certs/authplaypen-signing.pfx" --project src/AuthPlaypen.Api
-dotnet user-secrets set "OpenIddictSigningOptions:SigningCertificatePassword" "changeit-dev-only" --project src/AuthPlaypen.Api
+dotnet user-secrets set "OpenIddictSigningOptions:SigningCertificatePassword" "<your-dev-cert-password>" --project src/AuthPlaypen.Api
 ```
 
 Optional (TLS for browser/OIDC callbacks when running on host):

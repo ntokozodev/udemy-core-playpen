@@ -36,7 +36,7 @@ public static class ServiceCollectionExtensions
                         introspectionOptions.ClientId = options.IntrospectionClientId!;
                         introspectionOptions.ClientSecret = options.IntrospectionClientSecret!;
                         introspectionOptions.IntrospectionEndpoint = options.IntrospectionEndpoint;
-                        introspectionOptions.EnableCaching = true;
+                        introspectionOptions.SaveToken = true;
                         introspectionOptions.CacheDuration = TimeSpan.FromMinutes(2);
                         introspectionOptions.NameClaimType = "sub";
                         introspectionOptions.RoleClaimType = "role";
