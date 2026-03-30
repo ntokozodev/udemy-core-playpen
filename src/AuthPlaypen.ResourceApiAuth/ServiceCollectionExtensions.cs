@@ -14,11 +14,18 @@ public static class ServiceCollectionExtensions
         configure(options);
         ValidateOptions(options);
 
+        var defaultScheme = options.ValidationMode switch
+        {
+            AuthApiTokenValidationMode.Jwt => JwtBearerDefaults.AuthenticationScheme,
+            AuthApiTokenValidationMode.Introspection => OAuth2IntrospectionDefaults.AuthenticationScheme,
+            _ => throw new ArgumentOutOfRangeException(nameof(options.ValidationMode), options.ValidationMode, "Unsupported validation mode.")
+        };
+
         switch (options.ValidationMode)
         {
             case AuthApiTokenValidationMode.Jwt:
                 services
-                    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                    .AddAuthentication(defaultScheme)
                     .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, jwtOptions =>
                     {
                         jwtOptions.Authority = options.Authority;
@@ -29,7 +36,7 @@ public static class ServiceCollectionExtensions
 
             case AuthApiTokenValidationMode.Introspection:
                 services
-                    .AddAuthentication(OAuth2IntrospectionDefaults.AuthenticationScheme)
+                    .AddAuthentication(defaultScheme)
                     .AddOAuth2Introspection(OAuth2IntrospectionDefaults.AuthenticationScheme, introspectionOptions =>
                     {
                         introspectionOptions.Authority = options.Authority;
@@ -46,6 +53,12 @@ public static class ServiceCollectionExtensions
             default:
                 throw new ArgumentOutOfRangeException(nameof(options.ValidationMode), options.ValidationMode, "Unsupported validation mode.");
         }
+
+        services.PostConfigure<Microsoft.AspNetCore.Authentication.AuthenticationOptions>(authenticationOptions =>
+        {
+            authenticationOptions.DefaultAuthenticateScheme = defaultScheme;
+            authenticationOptions.DefaultChallengeScheme = defaultScheme;
+        });
 
         services.AddAuthorization();
         return services;
