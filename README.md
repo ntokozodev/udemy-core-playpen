@@ -1,6 +1,6 @@
 # dotnet-auth-playpen
 
-This README is intentionally **developer-focused** for engineers working on `AuthPlaypen.Api` and its supporting projects.
+`AuthPlaypen.Api` is an ASP.NET Core 8 auth/admin API and supporting solution for managing applications, scopes, and OpenID Connect flows.
 
 For usage, integration, and deeper reference docs, use the docs index: [./docs/README.md](./docs/README.md).
 

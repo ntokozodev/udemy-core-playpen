@@ -1,5 +1,8 @@
 # Documentation Index
 
+[← Back to main README](../README.md)
+
+
 Use this folder for non-core README details so the root README stays focused on day-to-day development.
 
 ## Docs

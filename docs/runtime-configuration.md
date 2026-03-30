@@ -1,5 +1,8 @@
 # Runtime Configuration (AdminApp + API)
 
+[← Back to docs index](./README.md)
+
+
 ## Why runtime config exists
 
 `VITE_*` values are build-time only. QA/Staging/Live environments should use API-served runtime config via `GET /app-config`.
