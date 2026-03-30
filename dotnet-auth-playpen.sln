@@ -18,9 +18,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthPlaypen.Api.Tests", "te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthPlaypen.ResourceApiAuth.Tests", "tests\AuthPlaypen.ResourceApiAuth.Tests\AuthPlaypen.ResourceApiAuth.Tests.csproj", "{71AD5F89-3046-4F1A-BBF5-04DF32C82B46}"
 EndProject
-Project("{66A26720-8FB5-11D2-AA7E-00C04F688DDE}") = "src", "src", "{A3E01D40-0F86-4A04-B12A-3D4A11A018D8}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A3E01D40-0F86-4A04-B12A-3D4A11A018D8}"
 EndProject
-Project("{66A26720-8FB5-11D2-AA7E-00C04F688DDE}") = "tests", "tests", "{01ECFF8F-4D11-470F-B4DE-5AA623CCC7E8}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{01ECFF8F-4D11-470F-B4DE-5AA623CCC7E8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
