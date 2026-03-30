@@ -18,14 +18,14 @@ namespace AuthPlaypen.Api.Extensions;
 
 public static class AuthConfigurationExtensions
 {
-    public static IServiceCollection AddAuthPlaypenApi(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddAuthPlaypenApi(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         services.AddControllers();
         services.AddEndpointsApiExplorer();
         services.AddAuthPlaypenSwagger(configuration);
         services.AddAuthPlaypenAuthentication(configuration);
         services.AddAuthorization();
-        services.AddAuthPlaypenOpenIddict(configuration);
+        services.AddAuthPlaypenOpenIddict(configuration, environment);
         services.AddAuthPlaypenData(configuration);
         services.AddAuthPlaypenApplicationServices();
 
@@ -188,7 +188,7 @@ public static class AuthConfigurationExtensions
         }
     }
 
-    private static void AddAuthPlaypenOpenIddict(this IServiceCollection services, IConfiguration configuration)
+    private static void AddAuthPlaypenOpenIddict(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         var enableIntrospectionEndpoint = bool.TryParse(configuration["LocalAuth:EnableIntrospectionEndpoint"], out var enabledIntrospection) ? enabledIntrospection : true;
         var redisConnectionString = configuration.GetConnectionString("Redis") ?? "localhost:6379";
@@ -233,7 +233,7 @@ public static class AuthConfigurationExtensions
 
                 options.RegisterScopes(OpenIddictConstants.Scopes.OpenId, OpenIddictConstants.Scopes.Profile, OpenIddictConstants.Scopes.OfflineAccess);
 
-                ConfigureSigningCertificate(options, configuration);
+                ConfigureSigningCertificate(options, configuration, environment);
 
                 options.UseAspNetCore()
                     .EnableAuthorizationEndpointPassthrough()
@@ -261,7 +261,7 @@ public static class AuthConfigurationExtensions
         services.AddScoped<IOpenIddictApplicationSyncService, OpenIddictApplicationSyncService>();
     }
 
-    private static void ConfigureSigningCertificate(OpenIddictServerBuilder options, IConfiguration configuration)
+    private static void ConfigureSigningCertificate(OpenIddictServerBuilder options, IConfiguration configuration, IHostEnvironment environment)
     {
         var certPath = configuration["OpenIddictSigningOptions:SigningCertificatePath"];
         var certPassword = configuration["OpenIddictSigningOptions:SigningCertificatePassword"];
@@ -281,6 +281,13 @@ public static class AuthConfigurationExtensions
             var certificate = new X509Certificate2(certPath, certPassword);
             options.AddSigningCertificate(certificate);
             return;
+        }
+
+        if (!environment.IsDevelopment())
+        {
+            throw new InvalidOperationException(
+                "OpenIddict signing certificate is required outside Development. " +
+                "Set OpenIddictSigningOptions:SigningCertificatePath and OpenIddictSigningOptions:SigningCertificatePassword.");
         }
 
         options.AddDevelopmentSigningCertificate();

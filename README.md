@@ -25,7 +25,7 @@ For usage, integration, and deeper reference docs, use the docs index: [./docs/R
 
 ### 1) Generate a local OpenIddict signing certificate (server-like setup)
 
-To mimic production/server behavior, create a real `.pfx` signing certificate and wire it via:
+Create a `.pfx` signing certificate and wire it via:
 
 - `OpenIddictSigningOptions:SigningCertificatePath`
 - `OpenIddictSigningOptions:SigningCertificatePassword`
@@ -61,7 +61,8 @@ ASPNETCORE_URLS="https://localhost:5100;http://localhost:8080" dotnet run --proj
 ```
 
 Notes:
-- If `SigningCertificatePath` is empty, the API falls back to `AddDevelopmentSigningCertificate()`.
+- If `SigningCertificatePath` is empty, the API only falls back to `AddDevelopmentSigningCertificate()` in the `Development` environment.
+- In non-Development environments, configure `SigningCertificatePath` and `SigningCertificatePassword` explicitly (recommended for server-like local setups too).
 - `docker compose up --build` still maps HTTP on `http://localhost:8080` by default.
 - Keep `.certs/` local-only (do not commit private keys/certificates).
 
