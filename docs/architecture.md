@@ -64,6 +64,27 @@ In practice: if it's data/persistence-specific, put it in `AuthPlaypen.Data`.
 │                                                                            │      (near real-time checks)  │ │
 │                                                                            └──────────────────────────────┘ │
 │                                                                                                              │
+│  ------------------------------ RUNTIME PKCE LOGIN FLOW (AUTHORIZATION CODE) ------------------------------ │
+│                                                                                                              │
+│  ┌─────────────────────┐                 ┌──────────────────┐                  ┌────────────────────────┐   │
+│  │ Browser SPA / UI    │                 │     AuthApi      │                  │  External IdP         │   │
+│  │ (PKCE Client)       │                 │   (OpenIddict)   │                  │ (Azure AD / OIDC)     │   │
+│  └─────────┬───────────┘                 └────────┬─────────┘                  └──────────┬─────────────┘   │
+│            │ 1) GET /connect/authorize?code_challenge=... │                                 │                 │
+│            ├──────────────────────────────────────────────>│                                 │                 │
+│            │                                               │ 2) If no local session:         │                 │
+│            │                                               ├────────────────────────────────>│                 │
+│            │                                               │      challenge/redirect          │                 │
+│            │ 3) Browser authenticates user                │<────────────────────────────────┤                 │
+│            │<──────────────────────────────────────────────┤      callback with user identity │                 │
+│            │                                               │                                 │                 │
+│            │ 4) Redirect with authorization code           │                                 │                 │
+│            │<──────────────────────────────────────────────┤                                 │                 │
+│            │ 5) POST /connect/token (code + code_verifier)│                                 │                 │
+│            ├──────────────────────────────────────────────>│                                 │                 │
+│            │ 6) Access token (and optional refresh token) │                                 │                 │
+│            │<──────────────────────────────────────────────┤                                 │                 │
+│                                                                                                              │
 └──────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
