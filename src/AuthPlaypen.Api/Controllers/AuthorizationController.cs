@@ -25,10 +25,12 @@ public sealed class AuthorizationController : Controller
         var azureOidcScheme = await schemeProvider.GetSchemeAsync("AzureAdOidc");
         if (azureOidcScheme is null)
         {
-            return Problem(
-                title: "External login is not configured",
-                detail: "Configure AzureAd:TenantId, AzureAd:ClientId and AzureAd:ClientSecret to enable O365 sign-in.",
-                statusCode: StatusCodes.Status500InternalServerError);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "External login is not configured",
+                Detail = "Configure AzureAd:TenantId, AzureAd:ClientId and AzureAd:ClientSecret to enable O365 sign-in.",
+                Status = StatusCodes.Status500InternalServerError
+            });
         }
         var externalResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
         if (!externalResult.Succeeded || externalResult.Principal is null)

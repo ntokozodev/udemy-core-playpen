@@ -115,6 +115,7 @@ public class ServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddAuthorizationBuilder()
             .AddPolicy("scope-policy", policy => policy.RequireAnyScope("api.read", "api.write"));
 
@@ -139,6 +140,7 @@ public class ServiceCollectionExtensionsTests
     {
         // Arrange
         var services = new ServiceCollection();
+        services.AddLogging();
         services.AddAuthorizationBuilder()
             .AddPolicy("scope-policy", policy => policy.RequireAnyScope("api.read", "api.write"));
 
