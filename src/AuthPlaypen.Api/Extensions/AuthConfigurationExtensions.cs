@@ -4,9 +4,11 @@ using AuthPlaypen.Application.Services;
 using AuthPlaypen.Data.Data;
 using AuthPlaypen.OpenIddict.Redis.Models;
 using AuthPlaypen.OpenIddict.Redis.Stores;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -18,11 +20,15 @@ namespace AuthPlaypen.Api.Extensions;
 
 public static class AuthConfigurationExtensions
 {
+    private const string OidcDocName = "oidc";
+    private const string AdminDocName = "admin";
+
     public static IServiceCollection AddAuthPlaypenApi(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
         services.AddControllers();
         services.AddEndpointsApiExplorer();
-        services.AddAuthPlaypenSwagger(configuration);
+        services.AddProblemDetails();
+        services.AddAuthPlaypenSwagger(configuration, environment);
         services.AddAuthPlaypenAuthentication(configuration);
         services.AddAuthorization();
         services.AddAuthPlaypenOpenIddict(configuration, environment);
@@ -34,8 +40,41 @@ public static class AuthConfigurationExtensions
 
     public static void MapAuthPlaypenInfrastructure(this WebApplication app)
     {
-        if (app.Environment.IsDevelopment())
+        app.UseExceptionHandler();
+
+        if (app.Environment.IsProduction() || app.Environment.IsDevelopment() || app.Environment.IsEnvironment("UAT"))
         {
+            if (app.Environment.IsProduction())
+            {
+                app.Use(async (context, next) =>
+                {
+                    if (!context.Request.Path.StartsWithSegments("/swagger", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await next();
+                        return;
+                    }
+
+                    var authResult = await context.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                    if (authResult.Succeeded && authResult.Principal is not null)
+                    {
+                        context.User = authResult.Principal;
+                        await next();
+                        return;
+                    }
+
+                    var schemeProvider = context.RequestServices.GetRequiredService<IAuthenticationSchemeProvider>();
+                    var azureOidcScheme = await schemeProvider.GetSchemeAsync("AzureAdOidc");
+
+                    if (azureOidcScheme is not null)
+                    {
+                        await context.ChallengeAsync("AzureAdOidc");
+                        return;
+                    }
+
+                    context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                });
+            }
+
             app.UseSwagger();
             app.UseSwaggerUI(options =>
             {
@@ -52,6 +91,13 @@ public static class AuthConfigurationExtensions
                 if (!string.IsNullOrWhiteSpace(scope))
                 {
                     options.OAuthScopes(scope);
+                }
+
+                options.SwaggerEndpoint($"/swagger/{OidcDocName}/swagger.json", "AuthPlaypen OIDC/OAuth2 v1");
+
+                if (!app.Environment.IsProduction())
+                {
+                    options.SwaggerEndpoint($"/swagger/{AdminDocName}/swagger.json", "AuthPlaypen Admin API v1");
                 }
             });
         }
@@ -84,16 +130,48 @@ public static class AuthConfigurationExtensions
                 redirectPath,
                 postLogoutRedirectPath
             });
-        });
+        }).WithGroupName(AdminDocName);
 
         app.MapFallbackToFile("/admin/{*path:nonfile}", "admin/index.html");
         app.MapControllers();
     }
 
-    private static void AddAuthPlaypenSwagger(this IServiceCollection services, IConfiguration configuration)
+    private static void AddAuthPlaypenSwagger(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
+        var includeAdminDocs = !environment.IsProduction();
+
         services.AddSwaggerGen(options =>
         {
+            options.SwaggerDoc(OidcDocName, new OpenApiInfo
+            {
+                Title = "AuthPlaypen OIDC/OAuth2",
+                Version = "v1"
+            });
+
+            if (includeAdminDocs)
+            {
+                options.SwaggerDoc(AdminDocName, new OpenApiInfo
+                {
+                    Title = "AuthPlaypen API - Admin",
+                    Version = "v1"
+                });
+            }
+
+            options.DocInclusionPredicate((docName, apiDesc) =>
+            {
+                if (apiDesc.GroupName == OidcDocName)
+                {
+                    return docName == OidcDocName;
+                }
+
+                if (apiDesc.GroupName == AdminDocName)
+                {
+                    return includeAdminDocs && docName == AdminDocName;
+                }
+
+                return includeAdminDocs && docName == AdminDocName;
+            });
+
             var tenantId = configuration["AzureAd:TenantId"];
             var clientId = configuration["AzureAd:ClientId"];
             var scope = configuration["AzureAd:Scope"];

@@ -10,6 +10,7 @@ using OpenIddict.Server.AspNetCore;
 namespace AuthPlaypen.Api.Controllers;
 
 [ApiController]
+[ApiExplorerSettings(GroupName = "oidc")]
 public sealed class AuthorizationController : Controller
 {
     [HttpGet("~/connect/authorize")]

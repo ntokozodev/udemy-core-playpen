@@ -1,7 +1,7 @@
 import { apiConfig } from "@/services/apiConfig";
 import { mockHttp } from "@/services/mockApi";
 
-const API_BASE = "/api";
+const API_BASE = "/admin/api";
 
 function statusErrorMessage(status: number): string {
   if (status === 401 || status === 403) {
