@@ -190,7 +190,7 @@ public static class AuthConfigurationExtensions
 
     private static void AddAuthPlaypenOpenIddict(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
     {
-        var enableIntrospectionEndpoint = bool.TryParse(configuration["LocalAuth:EnableIntrospectionEndpoint"], out var enabledIntrospection) ? enabledIntrospection : true;
+        var enableIntrospectionEndpoint = bool.TryParse(configuration["FeatureOptions:EnableIntrospectionEndpoint"], out var enabledIntrospection) ? enabledIntrospection : true;
         var redisConnectionString = configuration.GetConnectionString("Redis") ?? "localhost:6379";
 
         services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisConnectionString));
