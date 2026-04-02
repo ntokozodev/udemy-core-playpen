@@ -15,6 +15,7 @@ using Microsoft.OpenApi.Models;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
 using StackExchange.Redis;
+using AuthPlaypen.Api;
 
 namespace AuthPlaypen.Api.Extensions;
 
@@ -63,11 +64,11 @@ public static class AuthConfigurationExtensions
                     }
 
                     var schemeProvider = context.RequestServices.GetRequiredService<IAuthenticationSchemeProvider>();
-                    var azureOidcScheme = await schemeProvider.GetSchemeAsync("AzureAdOidc");
+                    var azureOidcScheme = await schemeProvider.GetSchemeAsync(AuthSchemes.AzureAdOidc);
 
                     if (azureOidcScheme is not null)
                     {
-                        await context.ChallengeAsync("AzureAdOidc");
+                        await context.ChallengeAsync(AuthSchemes.AzureAdOidc);
                         return;
                     }
 
@@ -248,7 +249,7 @@ public static class AuthConfigurationExtensions
         {
             authenticationBuilder
                 .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme)
-                .AddOpenIdConnect("AzureAdOidc", options =>
+                .AddOpenIdConnect(AuthSchemes.AzureAdOidc, options =>
                 {
                     options.Authority = $"https://login.microsoftonline.com/{tenantId}/v2.0";
                     options.ClientId = azureClientId;
