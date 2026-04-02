@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using AuthPlaypen.Api.Authentication;
 
 namespace AuthPlaypen.Api.Tests;
 
@@ -36,7 +37,7 @@ internal sealed class StubSchemeProvider : AuthenticationSchemeProvider
 
     public override Task<AuthenticationScheme?> GetSchemeAsync(string name)
     {
-        if (name == "AzureAdOidc")
+        if (name == AuthSchemes.AzureAdOidc)
         {
             return Task.FromResult(AzureAdOidcScheme);
         }

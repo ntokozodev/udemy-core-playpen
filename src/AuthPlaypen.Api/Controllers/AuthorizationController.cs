@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
+using AuthPlaypen.Api.Authentication;
 
 namespace AuthPlaypen.Api.Controllers;
 
@@ -23,7 +24,7 @@ public sealed class AuthorizationController : Controller
 
 
         var schemeProvider = HttpContext.RequestServices.GetRequiredService<IAuthenticationSchemeProvider>();
-        var azureOidcScheme = await schemeProvider.GetSchemeAsync("AzureAdOidc");
+        var azureOidcScheme = await schemeProvider.GetSchemeAsync(AuthSchemes.AzureAdOidc);
         if (azureOidcScheme is null)
         {
             return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
@@ -37,7 +38,7 @@ public sealed class AuthorizationController : Controller
         if (!externalResult.Succeeded || externalResult.Principal is null)
         {
             var redirectUri = Request.PathBase + Request.Path + Request.QueryString;
-            return Challenge(new AuthenticationProperties { RedirectUri = redirectUri }, "AzureAdOidc");
+            return Challenge(new AuthenticationProperties { RedirectUri = redirectUri }, AuthSchemes.AzureAdOidc);
         }
 
         var principal = CreateOpenIddictPrincipal(externalResult.Principal, request);
