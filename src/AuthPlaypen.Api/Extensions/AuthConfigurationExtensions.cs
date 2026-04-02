@@ -15,7 +15,7 @@ using Microsoft.OpenApi.Models;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
 using StackExchange.Redis;
-using AuthPlaypen.Api;
+using AuthPlaypen.Api.Authentication;
 
 namespace AuthPlaypen.Api.Extensions;
 

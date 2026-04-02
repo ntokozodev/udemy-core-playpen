@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
-using AuthPlaypen.Api;
+using AuthPlaypen.Api.Authentication;
 
 namespace AuthPlaypen.Api.Controllers;
 

@@ -1,4 +1,4 @@
-namespace AuthPlaypen.Api;
+namespace AuthPlaypen.Api.Authentication;
 
 public static class AuthSchemes
 {

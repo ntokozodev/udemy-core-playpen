@@ -2,7 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
-using AuthPlaypen.Api;
+using AuthPlaypen.Api.Authentication;
 
 namespace AuthPlaypen.Api.Tests;
 
