@@ -1,7 +1,6 @@
 using AuthPlaypen.Api.Controllers;
 using AuthPlaypen.Application.Dtos;
 using AuthPlaypen.Application.Services;
-using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Xunit;
@@ -22,9 +21,9 @@ public class ScopesControllerTests
         var result = await controller.GetPage(cursor: null, pageSize: 101, CancellationToken.None);
 
         // Assert
-        var badRequest = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        badRequest.Value.Should().BeOfType<ProblemDetails>()
-            .Which.Title.Should().Be("Invalid page size");
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var details = Assert.IsType<ProblemDetails>(badRequest.Value);
+        Assert.Equal("Invalid page size", details.Title);
     }
 
     [Fact]
@@ -37,9 +36,9 @@ public class ScopesControllerTests
         var result = await controller.Search(term: "read", pageSize: 0, CancellationToken.None);
 
         // Assert
-        var badRequest = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        badRequest.Value.Should().BeOfType<ProblemDetails>()
-            .Which.Title.Should().Be("Invalid page size");
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var details = Assert.IsType<ProblemDetails>(badRequest.Value);
+        Assert.Equal("Invalid page size", details.Title);
     }
 
     [Fact]
@@ -57,7 +56,7 @@ public class ScopesControllerTests
         var result = await controller.GetById(id, CancellationToken.None);
 
         // Assert
-        result.Result.Should().BeOfType<NotFoundResult>();
+        Assert.IsType<NotFoundResult>(result.Result);
     }
 
     [Fact]
@@ -75,9 +74,9 @@ public class ScopesControllerTests
         var result = await controller.Create(request, CancellationToken.None);
 
         // Assert
-        var badRequest = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        badRequest.Value.Should().BeOfType<ProblemDetails>()
-            .Which.Status.Should().Be(400);
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var details = Assert.IsType<ProblemDetails>(badRequest.Value);
+        Assert.Equal(400, details.Status);
     }
 
     [Fact]
@@ -96,9 +95,9 @@ public class ScopesControllerTests
         var result = await controller.Update(id, request, CancellationToken.None);
 
         // Assert
-        var conflict = result.Result.Should().BeOfType<ConflictObjectResult>().Subject;
-        conflict.Value.Should().BeOfType<ProblemDetails>()
-            .Which.Status.Should().Be(409);
+        var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
+        var details = Assert.IsType<ProblemDetails>(conflict.Value);
+        Assert.Equal(409, details.Status);
     }
 
     [Fact]
@@ -116,6 +115,6 @@ public class ScopesControllerTests
         var result = await controller.Delete(id, CancellationToken.None);
 
         // Assert
-        result.Should().BeOfType<NotFoundResult>();
+        Assert.IsType<NotFoundResult>(result);
     }
 }

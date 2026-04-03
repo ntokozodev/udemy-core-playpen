@@ -1,7 +1,6 @@
 using AuthPlaypen.Api.Controllers;
 using AuthPlaypen.Application.Dtos;
 using AuthPlaypen.Application.Services;
-using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Xunit;
@@ -22,9 +21,9 @@ public class ApplicationsControllerTests
         var result = await controller.GetPage(cursor: null, pageSize: 0, CancellationToken.None);
 
         // Assert
-        var badRequest = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        badRequest.Value.Should().BeOfType<ProblemDetails>()
-            .Which.Title.Should().Be("Invalid page size");
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var details = Assert.IsType<ProblemDetails>(badRequest.Value);
+        Assert.Equal("Invalid page size", details.Title);
     }
 
     [Fact]
@@ -37,9 +36,9 @@ public class ApplicationsControllerTests
         var result = await controller.GetPage(cursor: "not-a-guid", pageSize: 10, CancellationToken.None);
 
         // Assert
-        var badRequest = result.Result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        badRequest.Value.Should().BeOfType<ProblemDetails>()
-            .Which.Title.Should().Be("Invalid cursor");
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+        var details = Assert.IsType<ProblemDetails>(badRequest.Value);
+        Assert.Equal("Invalid cursor", details.Title);
     }
 
     [Fact]
@@ -52,9 +51,9 @@ public class ApplicationsControllerTests
         var result = await controller.Search(term: "   ", pageSize: 20, CancellationToken.None);
 
         // Assert
-        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        ok.Value.Should().BeAssignableTo<IReadOnlyCollection<ApplicationReferenceDto>>()
-            .Which.Should().BeEmpty();
+        var ok = Assert.IsType<OkObjectResult>(result.Result);
+        var applications = Assert.IsAssignableFrom<IReadOnlyCollection<ApplicationReferenceDto>>(ok.Value);
+        Assert.Empty(applications);
         _applicationService.Verify(service => service.SearchAsync(It.IsAny<string>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -73,7 +72,7 @@ public class ApplicationsControllerTests
         var result = await controller.GetById(id, CancellationToken.None);
 
         // Assert
-        result.Result.Should().BeOfType<NotFoundResult>();
+        Assert.IsType<NotFoundResult>(result.Result);
     }
 
     [Fact]
@@ -91,9 +90,9 @@ public class ApplicationsControllerTests
         var result = await controller.Create(request, CancellationToken.None);
 
         // Assert
-        var conflict = result.Result.Should().BeOfType<ConflictObjectResult>().Subject;
-        conflict.Value.Should().BeOfType<ProblemDetails>()
-            .Which.Status.Should().Be(409);
+        var conflict = Assert.IsType<ConflictObjectResult>(result.Result);
+        var details = Assert.IsType<ProblemDetails>(conflict.Value);
+        Assert.Equal(409, details.Status);
     }
 
     [Fact]
@@ -112,7 +111,7 @@ public class ApplicationsControllerTests
         var result = await controller.Update(id, request, CancellationToken.None);
 
         // Assert
-        result.Result.Should().BeOfType<NotFoundResult>();
+        Assert.IsType<NotFoundResult>(result.Result);
     }
 
     [Fact]
@@ -130,6 +129,6 @@ public class ApplicationsControllerTests
         var result = await controller.Delete(id, CancellationToken.None);
 
         // Assert
-        result.Should().BeOfType<NoContentResult>();
+        Assert.IsType<NoContentResult>(result);
     }
 }

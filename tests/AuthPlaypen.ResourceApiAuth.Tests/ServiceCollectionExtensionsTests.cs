@@ -1,6 +1,5 @@
 using AuthPlaypen.ResourceApiAuth;
 using Duende.AspNetCore.Authentication.OAuth2Introspection;
-using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -22,8 +21,8 @@ public class ServiceCollectionExtensionsTests
         var act = () => services.AddAuthApiResourceAuthentication(_ => { });
 
         // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*Audience is required*");
+        var exception = Assert.Throws<InvalidOperationException>(act);
+        Assert.Contains("Audience is required", exception.Message);
     }
 
     [Fact]
@@ -40,8 +39,8 @@ public class ServiceCollectionExtensionsTests
         });
 
         // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*IntrospectionClientId is required*");
+        var exception = Assert.Throws<InvalidOperationException>(act);
+        Assert.Contains("IntrospectionClientId is required", exception.Message);
     }
 
     [Fact]
@@ -62,15 +61,15 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         var authOptions = provider.GetRequiredService<IOptions<AuthenticationOptions>>().Value;
-        authOptions.DefaultAuthenticateScheme.Should().Be(JwtBearerDefaults.AuthenticationScheme);
+        Assert.Equal(JwtBearerDefaults.AuthenticationScheme, authOptions.DefaultAuthenticateScheme);
 
         var jwtOptions = provider
             .GetRequiredService<IOptionsMonitor<JwtBearerOptions>>()
             .Get(JwtBearerDefaults.AuthenticationScheme);
 
-        jwtOptions.Authority.Should().Be("https://issuer.example");
-        jwtOptions.Audience.Should().Be("resource-api");
-        jwtOptions.RequireHttpsMetadata.Should().BeFalse();
+        Assert.Equal("https://issuer.example", jwtOptions.Authority);
+        Assert.Equal("resource-api", jwtOptions.Audience);
+        Assert.False(jwtOptions.RequireHttpsMetadata);
     }
 
     [Fact]
@@ -94,20 +93,20 @@ public class ServiceCollectionExtensionsTests
 
         // Assert
         var authOptions = provider.GetRequiredService<IOptions<AuthenticationOptions>>().Value;
-        authOptions.DefaultAuthenticateScheme.Should().Be(OAuth2IntrospectionDefaults.AuthenticationScheme);
+        Assert.Equal(OAuth2IntrospectionDefaults.AuthenticationScheme, authOptions.DefaultAuthenticateScheme);
 
         var introspectionOptions = provider
             .GetRequiredService<IOptionsMonitor<OAuth2IntrospectionOptions>>()
             .Get(OAuth2IntrospectionDefaults.AuthenticationScheme);
 
-        introspectionOptions.Authority.Should().Be("https://issuer.example");
-        introspectionOptions.ClientId.Should().Be("resource-client");
-        introspectionOptions.ClientSecret.Should().Be("secret");
-        introspectionOptions.IntrospectionEndpoint.Should().Be("/custom/introspect");
-        introspectionOptions.SaveToken.Should().BeTrue();
-        introspectionOptions.CacheDuration.Should().Be(TimeSpan.FromMinutes(2));
-        introspectionOptions.NameClaimType.Should().Be("sub");
-        introspectionOptions.RoleClaimType.Should().Be("role");
+        Assert.Equal("https://issuer.example", introspectionOptions.Authority);
+        Assert.Equal("resource-client", introspectionOptions.ClientId);
+        Assert.Equal("secret", introspectionOptions.ClientSecret);
+        Assert.Equal("/custom/introspect", introspectionOptions.IntrospectionEndpoint);
+        Assert.True(introspectionOptions.SaveToken);
+        Assert.Equal(TimeSpan.FromMinutes(2), introspectionOptions.CacheDuration);
+        Assert.Equal("sub", introspectionOptions.NameClaimType);
+        Assert.Equal("role", introspectionOptions.RoleClaimType);
     }
 
     [Fact]
@@ -132,7 +131,7 @@ public class ServiceCollectionExtensionsTests
         var result = await authorizationService.AuthorizeAsync(user, resource: null, policyName: "scope-policy");
 
         // Assert
-        result.Succeeded.Should().BeTrue();
+        Assert.True(result.Succeeded);
     }
 
     [Fact]
@@ -157,7 +156,7 @@ public class ServiceCollectionExtensionsTests
         var result = await authorizationService.AuthorizeAsync(user, resource: null, policyName: "scope-policy");
 
         // Assert
-        result.Succeeded.Should().BeFalse();
+        Assert.False(result.Succeeded);
     }
 
     [Fact]
@@ -170,7 +169,7 @@ public class ServiceCollectionExtensionsTests
         var act = () => builder.RequireAnyScope();
 
         // Assert
-        act.Should().Throw<ArgumentException>()
-            .WithMessage("*At least one scope is required*");
+        var exception = Assert.Throws<ArgumentException>(act);
+        Assert.Contains("At least one scope is required", exception.Message);
     }
 }
