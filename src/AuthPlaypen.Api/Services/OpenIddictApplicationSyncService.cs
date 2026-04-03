@@ -5,20 +5,20 @@ using OpenIddict.Abstractions;
 
 namespace AuthPlaypen.Api.Services;
 
-public sealed class OpenIddictApplicationSyncService(IOpenIddictApplicationManager applicationManager) : IOpenIddictApplicationSyncService
+public sealed class OpenIddictApplicationSyncService(IOpenIddictApplicationManager applicationManager) : IOpenIddictSyncOrchestrator<ApplicationDto>
 {
-    public async Task HandleApplicationCreationAsync(ApplicationDto dto, CancellationToken cancellationToken)
+    public async Task HandleCreationAsync(ApplicationDto dto, CancellationToken cancellationToken)
     {
         var descriptor = ToDescriptor(dto);
         await applicationManager.CreateAsync(descriptor, cancellationToken);
     }
 
-    public async Task HandleApplicationUpdateAsync(ApplicationDto dto, CancellationToken cancellationToken)
+    public async Task HandleUpdateAsync(ApplicationDto dto, CancellationToken cancellationToken)
     {
         var application = await applicationManager.FindByClientIdAsync(dto.ClientId, cancellationToken);
         if (application is null)
         {
-            await HandleApplicationCreationAsync(dto, cancellationToken);
+            await HandleCreationAsync(dto, cancellationToken);
             return;
         }
 
@@ -26,7 +26,7 @@ public sealed class OpenIddictApplicationSyncService(IOpenIddictApplicationManag
         await applicationManager.UpdateAsync(application, descriptor, cancellationToken);
     }
 
-    public async Task HandleApplicationDeletionAsync(Guid applicationId, CancellationToken cancellationToken)
+    public async Task HandleDeletionAsync(Guid applicationId, CancellationToken cancellationToken)
     {
         var application = await applicationManager.FindByIdAsync(applicationId.ToString(), cancellationToken);
         if (application is null)

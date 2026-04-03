@@ -336,8 +336,8 @@ public static class AuthConfigurationExtensions
     {
         services.AddScoped<IApplicationService, ApplicationService>();
         services.AddScoped<IScopeService, ScopeService>();
-        services.AddScoped<IOpenIddictScopeSyncService, OpenIddictScopeSyncService>();
-        services.AddScoped<IOpenIddictApplicationSyncService, OpenIddictApplicationSyncService>();
+        services.AddScoped<IOpenIddictSyncOrchestrator<ScopeDto>, OpenIddictScopeSyncService>();
+        services.AddScoped<IOpenIddictSyncOrchestrator<ApplicationDto>, OpenIddictApplicationSyncService>();
     }
 
     private static void ConfigureSigningCertificate(OpenIddictServerBuilder options, IConfiguration configuration, IHostEnvironment environment)
