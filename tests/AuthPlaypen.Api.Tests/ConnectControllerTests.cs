@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using AuthPlaypen.Api.Controllers;
-using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -43,8 +42,8 @@ public class ConnectControllerTests
         var result = await controller.Authorize(CancellationToken.None);
 
         // Assert
-        var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
-        objectResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
+        var objectResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status500InternalServerError, objectResult.StatusCode);
     }
 
     [Fact]
@@ -68,9 +67,9 @@ public class ConnectControllerTests
         var result = await controller.Token(CancellationToken.None);
 
         // Assert
-        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        badRequest.Value.Should().BeOfType<OpenIddictResponse>()
-            .Which.Error.Should().Be(OpenIddictConstants.Errors.UnsupportedGrantType);
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        var response = Assert.IsType<OpenIddictResponse>(badRequest.Value);
+        Assert.Equal(OpenIddictConstants.Errors.UnsupportedGrantType, response.Error);
     }
 
     [Fact]
@@ -98,9 +97,9 @@ public class ConnectControllerTests
         var result = await controller.Token(CancellationToken.None);
 
         // Assert
-        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        badRequest.Value.Should().BeOfType<OpenIddictResponse>()
-            .Which.Error.Should().Be(OpenIddictConstants.Errors.InvalidGrant);
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        var response = Assert.IsType<OpenIddictResponse>(badRequest.Value);
+        Assert.Equal(OpenIddictConstants.Errors.InvalidGrant, response.Error);
     }
 
     [Fact]
@@ -141,11 +140,11 @@ public class ConnectControllerTests
         var result = await controller.Token(CancellationToken.None);
 
         // Assert
-        var signIn = result.Should().BeOfType<SignInResult>().Subject;
-        signIn.AuthenticationScheme.Should().Be(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-        signIn.Principal?.GetClaim(OpenIddictConstants.Claims.Subject).Should().Be("user-123");
-        signIn.Principal?.GetClaim(OpenIddictConstants.Claims.Name).Should().Be("Ada Lovelace");
-        signIn.Principal?.GetClaim(OpenIddictConstants.Claims.Email).Should().Be("ada@example.com");
+        var signIn = Assert.IsType<SignInResult>(result);
+        Assert.Equal(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, signIn.AuthenticationScheme);
+        Assert.Equal("user-123", signIn.Principal?.GetClaim(OpenIddictConstants.Claims.Subject));
+        Assert.Equal("Ada Lovelace", signIn.Principal?.GetClaim(OpenIddictConstants.Claims.Name));
+        Assert.Equal("ada@example.com", signIn.Principal?.GetClaim(OpenIddictConstants.Claims.Email));
     }
 
     [Fact]
@@ -172,9 +171,9 @@ public class ConnectControllerTests
         var result = await controller.Token(CancellationToken.None);
 
         // Assert
-        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        badRequest.Value.Should().BeOfType<OpenIddictResponse>()
-            .Which.Error.Should().Be(OpenIddictConstants.Errors.InvalidClient);
+        var badRequest = Assert.IsType<BadRequestObjectResult>(result);
+        var response = Assert.IsType<OpenIddictResponse>(badRequest.Value);
+        Assert.Equal(OpenIddictConstants.Errors.InvalidClient, response.Error);
     }
 
     [Fact]
@@ -221,12 +220,12 @@ public class ConnectControllerTests
         var result = await controller.Token(CancellationToken.None);
 
         // Assert
-        var signIn = result.Should().BeOfType<SignInResult>().Subject;
-        signIn.AuthenticationScheme.Should().Be(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-        signIn.Principal?.GetClaim(OpenIddictConstants.Claims.Subject).Should().Be("playpen-client");
-        signIn.Principal?.GetClaim("client_id").Should().Be("playpen-client");
-        signIn.Principal?.GetClaim(OpenIddictConstants.Claims.Name).Should().Be("Playpen client");
-        signIn.Principal?.GetScopes().Should().ContainSingle().Which.Should().Be("api.read");
+        var signIn = Assert.IsType<SignInResult>(result);
+        Assert.Equal(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, signIn.AuthenticationScheme);
+        Assert.Equal("playpen-client", signIn.Principal?.GetClaim(OpenIddictConstants.Claims.Subject));
+        Assert.Equal("playpen-client", signIn.Principal?.GetClaim("client_id"));
+        Assert.Equal("Playpen client", signIn.Principal?.GetClaim(OpenIddictConstants.Claims.Name));
+        Assert.Equal(new[] { "api.read" }, signIn.Principal?.GetScopes());
     }
 
     [Fact]
@@ -246,8 +245,8 @@ public class ConnectControllerTests
         var result = await controller.Logout(CancellationToken.None);
 
         // Assert
-        var signOut = result.Should().BeOfType<SignOutResult>().Subject;
-        signOut.Properties?.RedirectUri.Should().Be("/");
-        signOut.AuthenticationSchemes.Should().Contain(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        var signOut = Assert.IsType<SignOutResult>(result);
+        Assert.Equal("/", signOut.Properties?.RedirectUri);
+        Assert.Contains(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme, signOut.AuthenticationSchemes);
     }
 }

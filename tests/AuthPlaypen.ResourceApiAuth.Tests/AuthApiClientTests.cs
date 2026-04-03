@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using AuthPlaypen.ResourceApiAuth;
-using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -24,8 +23,8 @@ public class AuthApiClientTests
         });
 
         // Assert
-        act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*ClientId is required*");
+        var exception = Assert.Throws<InvalidOperationException>(act);
+        Assert.Contains("ClientId is required", exception.Message);
     }
 
     [Fact]
@@ -63,9 +62,9 @@ public class AuthApiClientTests
         var token = await client.RequestClientCredentialsTokenAsync(["scope.read"]);
 
         // Assert
-        token.AccessToken.Should().Be("abc123");
-        token.TokenType.Should().Be("Bearer");
-        token.ExpiresIn.Should().Be(3600);
+        Assert.Equal("abc123", token.AccessToken);
+        Assert.Equal("Bearer", token.TokenType);
+        Assert.Equal(3600, token.ExpiresIn);
     }
 
     [Fact]
@@ -97,9 +96,9 @@ public class AuthApiClientTests
         var response = await client.IntrospectTokenAsync("token-value");
 
         // Assert
-        response.Active.Should().BeTrue();
-        response.Subject.Should().Be("user-1");
-        response.Scope.Should().Be("scope.read");
+        Assert.True(response.Active);
+        Assert.Equal("user-1", response.Subject);
+        Assert.Equal("scope.read", response.Scope);
     }
 
     private sealed class StubHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder) : HttpMessageHandler
