@@ -1,11 +1,11 @@
+using System.Security.Claims;
 using AuthPlaypen.Api.Controllers;
 using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Moq;
 using OpenIddict.Abstractions;
 using OpenIddict.Server;
@@ -17,36 +17,34 @@ namespace AuthPlaypen.Api.Tests;
 public class ConnectControllerTests
 {
     [Fact]
-    public async Task Authorize_ShouldReturnBadRequest_WhenAzureClientIdIsMissingAndUserIsUnauthenticated()
+    public async Task Authorize_ShouldReturnProblem_WhenAzureOidcSchemeIsMissing()
     {
         // Arrange
-        var applicationManager = new Mock<IOpenIddictApplicationManager>();
-        var scopeManager = new Mock<IOpenIddictScopeManager>();
-        var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>()).Build();
-
-        var controller = new ConnectController(applicationManager.Object, scopeManager.Object, configuration);
         var services = new ServiceCollection();
-        services.AddSingleton<Microsoft.AspNetCore.Authentication.IAuthenticationService>(
-            new StubAuthenticationService { AuthenticateResult = Microsoft.AspNetCore.Authentication.AuthenticateResult.NoResult() });
+        services.AddOptions();
+        services.AddLogging();
 
-        var httpContext = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
+        var schemeProvider = new StubSchemeProvider(Options.Create(new AuthenticationOptions()));
+        services.AddSingleton<IAuthenticationSchemeProvider>(schemeProvider);
+
+        var serviceProvider = services.BuildServiceProvider();
+        var httpContext = new DefaultHttpContext { RequestServices = serviceProvider };
         httpContext.Features.Set(new OpenIddictServerAspNetCoreFeature
         {
-            Transaction = new OpenIddictServerTransaction
-            {
-                Request = new OpenIddictRequest()
-            }
+            Transaction = new OpenIddictServerTransaction { Request = new OpenIddictRequest() }
         });
 
-        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+        var controller = new ConnectController(new Mock<IOpenIddictApplicationManager>().Object)
+        {
+            ControllerContext = new ControllerContext { HttpContext = httpContext }
+        };
 
         // Act
         var result = await controller.Authorize(CancellationToken.None);
 
         // Assert
-        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
-        badRequest.Value.Should().BeOfType<OpenIddictResponse>()
-            .Which.Error.Should().Be(OpenIddictConstants.Errors.ServerError);
+        var objectResult = result.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status500InternalServerError);
     }
 
     [Fact]
@@ -54,10 +52,7 @@ public class ConnectControllerTests
     {
         // Arrange
         var applicationManager = new Mock<IOpenIddictApplicationManager>();
-        var scopeManager = new Mock<IOpenIddictScopeManager>();
-        var configuration = new ConfigurationBuilder().Build();
-
-        var controller = new ConnectController(applicationManager.Object, scopeManager.Object, configuration);
+        var controller = new ConnectController(applicationManager.Object);
         var httpContext = new DefaultHttpContext();
         httpContext.Features.Set(new OpenIddictServerAspNetCoreFeature
         {
@@ -79,35 +74,57 @@ public class ConnectControllerTests
     }
 
     [Fact]
-    public async Task Authorize_ShouldReturnSignIn_WhenUserIsAuthenticated()
+    public async Task Token_ShouldReturnBadRequest_WhenAuthorizationCodeIsInvalid()
     {
         // Arrange
         var applicationManager = new Mock<IOpenIddictApplicationManager>();
-        var scopeManager = new Mock<IOpenIddictScopeManager>();
-        scopeManager
-            .Setup(manager => manager.ListResourcesAsync(
-                It.Is<IEnumerable<string>>(scopes => scopes.SequenceEqual(["api"])),
-                It.IsAny<CancellationToken>()))
-            .Returns(GetAsyncEnumerable("resource-api"));
+        var controller = new ConnectController(applicationManager.Object);
 
-        var configuration = new ConfigurationBuilder().Build();
-        var controller = new ConnectController(applicationManager.Object, scopeManager.Object, configuration);
+        var services = new ServiceCollection();
+        services.AddSingleton<IAuthenticationService>(
+            new StubAuthenticationService { AuthenticateResult = AuthenticateResult.NoResult() });
 
-        var principal = new System.Security.Claims.ClaimsPrincipal(
-            new System.Security.Claims.ClaimsIdentity(
+        var httpContext = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
+        httpContext.Features.Set(new OpenIddictServerAspNetCoreFeature
+        {
+            Transaction = new OpenIddictServerTransaction
+            {
+                Request = new OpenIddictRequest { GrantType = OpenIddictConstants.GrantTypes.AuthorizationCode }
+            }
+        });
+        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+        // Act
+        var result = await controller.Token(CancellationToken.None);
+
+        // Assert
+        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badRequest.Value.Should().BeOfType<OpenIddictResponse>()
+            .Which.Error.Should().Be(OpenIddictConstants.Errors.InvalidGrant);
+    }
+
+    [Fact]
+    public async Task Token_ShouldReturnSignIn_WhenAuthorizationCodeIsValid()
+    {
+        // Arrange
+        var applicationManager = new Mock<IOpenIddictApplicationManager>();
+        var controller = new ConnectController(applicationManager.Object);
+
+        var principal = new ClaimsPrincipal(
+            new ClaimsIdentity(
             [
-                new(System.Security.Claims.ClaimTypes.NameIdentifier, "user-123"),
-                new(System.Security.Claims.ClaimTypes.Name, "Ada Lovelace"),
-                new(System.Security.Claims.ClaimTypes.Email, "ada@example.com")
+                new(OpenIddictConstants.Claims.Subject, "user-123"),
+                new(OpenIddictConstants.Claims.Name, "Ada Lovelace"),
+                new(OpenIddictConstants.Claims.Email, "ada@example.com")
             ],
-            CookieAuthenticationDefaults.AuthenticationScheme));
+            OpenIddictServerAspNetCoreDefaults.AuthenticationScheme));
 
         var services = new ServiceCollection();
         services.AddSingleton<IAuthenticationService>(
             new StubAuthenticationService
             {
                 AuthenticateResult = AuthenticateResult.Success(
-                    new AuthenticationTicket(principal, CookieAuthenticationDefaults.AuthenticationScheme))
+                    new AuthenticationTicket(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme))
             });
 
         var httpContext = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
@@ -115,14 +132,13 @@ public class ConnectControllerTests
         {
             Transaction = new OpenIddictServerTransaction
             {
-                Request = new OpenIddictRequest { Scope = "api" }
+                Request = new OpenIddictRequest { GrantType = OpenIddictConstants.GrantTypes.AuthorizationCode }
             }
         });
-
         controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
 
         // Act
-        var result = await controller.Authorize(CancellationToken.None);
+        var result = await controller.Token(CancellationToken.None);
 
         // Assert
         var signIn = result.Should().BeOfType<SignInResult>().Subject;
@@ -130,8 +146,35 @@ public class ConnectControllerTests
         signIn.Principal?.GetClaim(OpenIddictConstants.Claims.Subject).Should().Be("user-123");
         signIn.Principal?.GetClaim(OpenIddictConstants.Claims.Name).Should().Be("Ada Lovelace");
         signIn.Principal?.GetClaim(OpenIddictConstants.Claims.Email).Should().Be("ada@example.com");
-        signIn.Principal?.GetScopes().Should().ContainSingle().Which.Should().Be("api");
-        signIn.Principal?.GetResources().Should().ContainSingle().Which.Should().Be("resource-api");
+    }
+
+    [Fact]
+    public async Task Token_ShouldReturnBadRequest_WhenClientCredentialsAreMissing()
+    {
+        // Arrange
+        var applicationManager = new Mock<IOpenIddictApplicationManager>();
+        var controller = new ConnectController(applicationManager.Object);
+        var httpContext = new DefaultHttpContext();
+        httpContext.Features.Set(new OpenIddictServerAspNetCoreFeature
+        {
+            Transaction = new OpenIddictServerTransaction
+            {
+                Request = new OpenIddictRequest
+                {
+                    GrantType = OpenIddictConstants.GrantTypes.ClientCredentials,
+                    ClientId = "playpen-client"
+                }
+            }
+        });
+        controller.ControllerContext = new ControllerContext { HttpContext = httpContext };
+
+        // Act
+        var result = await controller.Token(CancellationToken.None);
+
+        // Assert
+        var badRequest = result.Should().BeOfType<BadRequestObjectResult>().Subject;
+        badRequest.Value.Should().BeOfType<OpenIddictResponse>()
+            .Which.Error.Should().Be(OpenIddictConstants.Errors.InvalidClient);
     }
 
     [Fact]
@@ -157,9 +200,7 @@ public class ConnectControllerTests
             .Setup(manager => manager.GetDisplayNameAsync(application, It.IsAny<CancellationToken>()))
             .ReturnsAsync("Playpen client");
 
-        var scopeManager = new Mock<IOpenIddictScopeManager>();
-        var configuration = new ConfigurationBuilder().Build();
-        var controller = new ConnectController(applicationManager.Object, scopeManager.Object, configuration);
+        var controller = new ConnectController(applicationManager.Object);
 
         var httpContext = new DefaultHttpContext();
         httpContext.Features.Set(new OpenIddictServerAspNetCoreFeature
@@ -189,30 +230,24 @@ public class ConnectControllerTests
     }
 
     [Fact]
-    public void Logout_ShouldReturnSignOutResult_WithExpectedSchemes()
+    public async Task Logout_ShouldReturnSignOutResultWithRootRedirect()
     {
         // Arrange
-        var applicationManager = new Mock<IOpenIddictApplicationManager>();
-        var scopeManager = new Mock<IOpenIddictScopeManager>();
-        var configuration = new ConfigurationBuilder().Build();
-        var controller = new ConnectController(applicationManager.Object, scopeManager.Object, configuration);
+        var services = new ServiceCollection();
+        services.AddSingleton<IAuthenticationService>(new StubAuthenticationService());
+        var httpContext = new DefaultHttpContext { RequestServices = services.BuildServiceProvider() };
+
+        var controller = new ConnectController(new Mock<IOpenIddictApplicationManager>().Object)
+        {
+            ControllerContext = new ControllerContext { HttpContext = httpContext }
+        };
 
         // Act
-        var result = controller.Logout();
+        var result = await controller.Logout(CancellationToken.None);
 
         // Assert
         var signOut = result.Should().BeOfType<SignOutResult>().Subject;
         signOut.Properties?.RedirectUri.Should().Be("/");
-        signOut.AuthenticationSchemes.Should().Contain(Microsoft.AspNetCore.Authentication.Cookies.CookieAuthenticationDefaults.AuthenticationScheme);
         signOut.AuthenticationSchemes.Should().Contain(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-    }
-
-    private static async IAsyncEnumerable<string> GetAsyncEnumerable(params string[] values)
-    {
-        foreach (var value in values)
-        {
-            yield return value;
-            await Task.Yield();
-        }
     }
 }
