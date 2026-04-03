@@ -1,5 +1,5 @@
 using System.Security.Cryptography.X509Certificates;
-using AuthPlaypen.Api.Services;
+using AuthPlaypen.Api.Infrastructure.OpenIddict;
 using AuthPlaypen.Application.Services;
 using AuthPlaypen.Data.Data;
 using AuthPlaypen.OpenIddict.Redis.Models;
@@ -336,8 +336,8 @@ public static class AuthConfigurationExtensions
     {
         services.AddScoped<IApplicationService, ApplicationService>();
         services.AddScoped<IScopeService, ScopeService>();
-        services.AddScoped<IOpenIddictScopeSyncService, OpenIddictScopeSyncService>();
-        services.AddScoped<IOpenIddictApplicationSyncService, OpenIddictApplicationSyncService>();
+        services.AddScoped<IOpenIddictSyncOrchestrator<ScopeDto>, OpenIddictScopeSyncOrchestrator>();
+        services.AddScoped<IOpenIddictSyncOrchestrator<ApplicationDto>, OpenIddictApplicationSyncOrchestrator>();
     }
 
     private static void ConfigureSigningCertificate(OpenIddictServerBuilder options, IConfiguration configuration, IHostEnvironment environment)

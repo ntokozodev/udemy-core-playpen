@@ -21,6 +21,8 @@
 
 In practice: if it's data/persistence-specific, put it in `AuthPlaypen.Data`.
 
+OpenIddict manager adapters (the sync/orchestrator implementations) live in `AuthPlaypen.Api/Infrastructure/OpenIddict` because they depend on OpenIddict runtime abstractions and are infrastructure wiring, not application use-case logic.
+
 ## Current high-level architecture
 
 ```text
