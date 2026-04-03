@@ -1,4 +1,4 @@
-# dotnet-auth-playpen
+# dotnet-oidc-playpen
 
 `AuthPlaypen.Api` is an ASP.NET Core 8 auth/admin API and supporting solution for managing applications, scopes, and OpenID Connect flows.
 
