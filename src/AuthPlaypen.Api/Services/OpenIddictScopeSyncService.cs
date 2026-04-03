@@ -4,20 +4,20 @@ using OpenIddict.Abstractions;
 
 namespace AuthPlaypen.Api.Services;
 
-public sealed class OpenIddictScopeSyncService(IOpenIddictScopeManager scopeManager) : IOpenIddictScopeSyncService
+public sealed class OpenIddictScopeSyncService(IOpenIddictScopeManager scopeManager) : IOpenIddictSyncOrchestrator<ScopeDto>
 {
-    public async Task HandleScopeCreationAsync(ScopeDto dto, CancellationToken cancellationToken)
+    public async Task HandleCreationAsync(ScopeDto dto, CancellationToken cancellationToken)
     {
         var descriptor = ToDescriptor(dto);
         await scopeManager.CreateAsync(descriptor, cancellationToken);
     }
 
-    public async Task HandleScopeUpdateAsync(ScopeDto dto, CancellationToken cancellationToken)
+    public async Task HandleUpdateAsync(ScopeDto dto, CancellationToken cancellationToken)
     {
         var scope = await scopeManager.FindByNameAsync(dto.ScopeName, cancellationToken);
         if (scope is null)
         {
-            await HandleScopeCreationAsync(dto, cancellationToken);
+            await HandleCreationAsync(dto, cancellationToken);
             return;
         }
 
@@ -25,7 +25,7 @@ public sealed class OpenIddictScopeSyncService(IOpenIddictScopeManager scopeMana
         await scopeManager.UpdateAsync(scope, descriptor, cancellationToken);
     }
 
-    public async Task HandleScopeDeletionAsync(Guid scopeId, CancellationToken cancellationToken)
+    public async Task HandleDeletionAsync(Guid scopeId, CancellationToken cancellationToken)
     {
         var scope = await scopeManager.FindByIdAsync(scopeId.ToString(), cancellationToken);
         if (scope is null)

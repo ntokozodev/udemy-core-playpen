@@ -7,7 +7,7 @@ namespace AuthPlaypen.Application.Services;
 
 public class ScopeService(
     AuthPlaypenDbContext dbContext,
-    IOpenIddictScopeSyncService openIddictScopeSyncService) : IScopeService
+    IOpenIddictSyncOrchestrator<ScopeDto> openIddictScopeSyncService) : IScopeService
 {
     public async Task<CursorPagedResultDto<ScopeDto>> GetPageAsync(Guid? cursor, int pageSize, CancellationToken cancellationToken)
     {
@@ -107,7 +107,7 @@ public class ScopeService(
             .FirstAsync(s => s.Id == scope.Id, cancellationToken);
 
         var dto = ToDto(reloaded);
-        await openIddictScopeSyncService.HandleScopeCreationAsync(dto, cancellationToken);
+        await openIddictScopeSyncService.HandleCreationAsync(dto, cancellationToken);
 
         return (dto, null);
     }
@@ -162,7 +162,7 @@ public class ScopeService(
             .FirstAsync(s => s.Id == id, cancellationToken);
 
         var dto = ToDto(reloaded);
-        await openIddictScopeSyncService.HandleScopeUpdateAsync(dto, cancellationToken);
+        await openIddictScopeSyncService.HandleUpdateAsync(dto, cancellationToken);
 
         return (dto, null, false);
     }
@@ -185,7 +185,7 @@ public class ScopeService(
 
         dbContext.Scopes.Remove(scope);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await openIddictScopeSyncService.HandleScopeDeletionAsync(id, cancellationToken);
+        await openIddictScopeSyncService.HandleDeletionAsync(id, cancellationToken);
         return (true, null, false);
     }
 
