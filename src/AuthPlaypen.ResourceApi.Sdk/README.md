@@ -27,6 +27,7 @@ AuthPlaypen.ResourceApi.Sdk/
 - Local JWT validation via OIDC discovery/JWKS.
 - Optional introspection mode for APIs that need active-token checks.
 - Scope policy helper (`RequireAnyScope`).
+- Dynamic permission-alias authorization with cached metadata resolution (`RequirePermissionAlias`).
 - Auth API client wrapper (`IAuthApiClient`) for token + introspection endpoints.
 
 ## Example (registration + runtime enforcement)
@@ -67,8 +68,40 @@ app.MapGet("/orders", [Authorize(Policy = "orders.read")] () => Results.Ok("read
 app.MapPost("/orders", [Authorize(Policy = "orders.write")] () => Results.Ok("write ok"));
 ```
 
+## Dynamic permission alias authorization (recommended)
+
+Use this to avoid hardcoding scope strings directly in endpoint policies:
+
+```csharp
+builder.Services.AddAuthApiPermissionAliasAuthorization(options =>
+{
+    options.Authority = "https://localhost:5100";
+    options.MetadataEndpoint = "/.well-known/authplaypen/permissions";
+    options.CacheDuration = TimeSpan.FromMinutes(5);
+
+    // Optional fallback map (last-resort resilience)
+    options.HardcodedFallbackMappings["orders.read"] = ["resource-b.orders.read"];
+});
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("orders.read", policy =>
+        policy.RequireAuthenticatedUser().RequirePermissionAlias("orders.read"));
+});
+```
+
+`/.well-known/authplaypen/permissions` is **not** an OpenID Connect standard endpoint.
+It is an AuthPlaypen-specific endpoint exposed by AuthApi.
+
+If you prefer, you can still use hardcoded scope values with `RequireAnyScope(...)`. That remains a viable
+option for stable/low-change APIs.
+
 `RequireAnyScope(...)` uses OR semantics across provided scopes.
 `Authority` is optional in this package and defaults to `https://localhost:5100`. Override it only if your Auth API host differs.
+
+When `ValidationMode = AuthApiTokenValidationMode.Jwt`, the SDK uses the configured `Authority` for
+OIDC discovery (`/.well-known/openid-configuration`) and JWKS (`/.well-known/jwks`) so token validation
+happens locally in the resource API.
 
 ### Static policy names vs dynamic AdminApp/OpenIddict data
 

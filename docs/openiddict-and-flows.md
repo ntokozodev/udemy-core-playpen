@@ -18,6 +18,7 @@
 - `/connect/revoke`
 - `/.well-known/openid-configuration`
 - `/.well-known/jwks`
+- `/.well-known/authplaypen/permissions` (AuthPlaypen extension; not OIDC standard)
 
 ## Supported grants
 

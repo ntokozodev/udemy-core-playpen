@@ -19,5 +19,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\AuthPlaypen.Api\AuthPlaypen.Api.csproj" />
     <ProjectReference Include="..\..\src\AuthPlaypen.Application\AuthPlaypen.Application.csproj" />
+    <ProjectReference Include="..\..\src\AuthPlaypen.OpenIddict.Redis\AuthPlaypen.OpenIddict.Redis.csproj" />
   </ItemGroup>
 </Project>
