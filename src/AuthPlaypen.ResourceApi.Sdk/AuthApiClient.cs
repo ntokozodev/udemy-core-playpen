@@ -2,7 +2,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 
-namespace AuthPlaypen.ResourceApiAuth;
+namespace AuthPlaypen.ResourceApi;
 
 public sealed class AuthApiClient(HttpClient httpClient, IOptions<AuthApiClientOptions> options) : IAuthApiClient
 {

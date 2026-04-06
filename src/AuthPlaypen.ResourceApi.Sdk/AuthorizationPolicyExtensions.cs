@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 
-namespace AuthPlaypen.ResourceApiAuth;
+namespace AuthPlaypen.ResourceApi;
 
 public static class AuthorizationPolicyExtensions
 {

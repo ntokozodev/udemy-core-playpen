@@ -20,6 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\AuthPlaypen.ResourceApiAuth\AuthPlaypen.ResourceApiAuth.csproj" />
+    <ProjectReference Include="..\..\src\AuthPlaypen.ResourceApi.Sdk\AuthPlaypen.ResourceApi.Sdk.csproj" />
   </ItemGroup>
 </Project>

@@ -1,11 +1,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text;
-using AuthPlaypen.ResourceApiAuth;
+using AuthPlaypen.ResourceApi;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
-namespace AuthPlaypen.ResourceApiAuth.Tests;
+namespace AuthPlaypen.ResourceApi.Tests;
 
 public class AuthApiClientTests
 {

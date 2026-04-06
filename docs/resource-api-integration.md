@@ -22,7 +22,7 @@ Optional for higher-security needs:
 
 ## Reusable package in this repo
 
-`src/AuthPlaypen.ResourceApiAuth` provides:
+`src/AuthPlaypen.ResourceApi.Sdk` provides:
 - `AddAuthApiResourceAuthentication(...)` for JWT or introspection validation setup.
 - Mode switch: `AuthApiTokenValidationMode.Jwt` / `AuthApiTokenValidationMode.Introspection`.
 - Scope policy helper: `RequireAnyScope(...)` (OR semantics across provided scopes).

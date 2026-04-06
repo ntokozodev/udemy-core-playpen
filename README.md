@@ -31,7 +31,7 @@ For usage, integration, and deeper reference docs, use the docs index: [./docs/R
 - `src/AuthPlaypen.Data` - EF Core `DbContext`, mappings, migrations, design-time factory.
 - `src/AuthPlaypen.Domain` - core entities and enums.
 - `src/AuthPlaypen.OpenIddict.Redis` - Redis OpenIddict stores/models.
-- `src/AuthPlaypen.ResourceApiAuth` - reusable auth package for downstream resource APIs.
+- `src/AuthPlaypen.ResourceApi.Sdk` - reusable downstream resource API auth SDK package (`AuthPlaypen.ResourceApi.Sdk` on NuGet).
 - `tests/AuthPlaypen.Api.Tests` - API test suite.
 
 ## Local development quick start
