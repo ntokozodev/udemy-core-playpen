@@ -9,7 +9,7 @@ using Xunit;
 
 namespace AuthPlaypen.ResourceApi.Tests;
 
-public class ServiceCollectionExtensionsTests
+public class ResourceAuthenticationTests
 {
     [Fact]
     public void AddAuthApiResourceAuthentication_ShouldThrow_WhenAudienceIsMissing()

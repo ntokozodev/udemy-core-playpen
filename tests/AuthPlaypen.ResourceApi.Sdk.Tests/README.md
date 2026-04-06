@@ -1,12 +1,20 @@
 # AuthPlaypen.ResourceApi.Sdk.Tests
 
-Unit test inventory after SDK project rename:
+Unit test inventory (organized by SDK responsibility):
+
+
+Folder layout:
+
+- `AuthApiClient/`
+  - `AuthApiClientTests.cs`
+- `ResourceAuthentication/`
+  - `ResourceAuthenticationTests.cs`
 
 - `AuthApiClientTests`
   - `AddAuthApiClient_ShouldThrow_WhenClientIdIsMissing`
   - `RequestClientCredentialsTokenAsync_ShouldReturnToken_WhenAuthApiRespondsSuccessfully`
   - `IntrospectTokenAsync_ShouldReturnIntrospectionPayload_WhenAuthApiRespondsSuccessfully`
-- `ServiceCollectionExtensionsTests`
+- `ResourceAuthenticationTests`
   - `AddAuthApiResourceAuthentication_ShouldThrow_WhenAudienceIsMissing`
   - `AddAuthApiResourceAuthentication_ShouldThrow_WhenIntrospectionCredentialsAreMissing`
   - `AddAuthApiResourceAuthentication_ShouldConfigureJwtBearerByDefault`
