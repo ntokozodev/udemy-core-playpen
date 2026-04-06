@@ -9,6 +9,19 @@ It now covers two related concerns:
 1. **Inbound token validation** for your API (`AddAuthApiResourceAuthentication`).
 2. **Outbound calls to the Auth API** for token/introspection workflows (`AddAuthApiClient`).
 
+
+## Package layout
+
+The SDK is organized by responsibility so navigation is self-documenting:
+
+```text
+AuthPlaypen.ResourceApi.Sdk/
+├── ResourceAuthentication/   # inbound bearer token validation setup (JWT/introspection)
+├── AuthApiClient/            # outbound Auth API client registration + implementation
+│   └── Models/               # token/introspection response contracts
+└── Authorization/            # scope policy helpers
+```
+
 ## Features
 
 - Local JWT validation via OIDC discovery/JWKS.
