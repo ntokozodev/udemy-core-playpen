@@ -70,6 +70,23 @@ app.MapPost("/orders", [Authorize(Policy = "orders.write")] () => Results.Ok("wr
 `RequireAnyScope(...)` uses OR semantics across provided scopes.
 `Authority` is optional in this package and defaults to `https://localhost:5100`. Override it only if your Auth API host differs.
 
+### Static policy names vs dynamic AdminApp/OpenIddict data
+
+`[Authorize(Policy = "orders.read")]` means this endpoint must satisfy a named ASP.NET authorization rule.
+
+Do not confuse policy names with AdminApp scopes: `orders.read` is your API policy alias, while
+`resource-b.orders.read` is an OAuth scope value in access tokens. Policy names can be renamed as long as
+the policy enforces the correct scope claim(s).
+
+### What if an endpoint has no `[Authorize(...)]`?
+
+That endpoint is public by default:
+
+- With `[Authorize(Policy = "orders.read")]`: caller must present a valid token with required scope(s).
+- Without `[Authorize]`: anyone can call the route (no token/scope check by default).
+
+In practice, the policy is what makes `/orders` protected and permission-aware, not just the route itself.
+
 ## Auth API SDK-style client wrapper
 
 This library also includes an easy-to-use client wrapper for common Auth API endpoints:

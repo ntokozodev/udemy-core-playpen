@@ -59,6 +59,30 @@ builder.Services.AddAuthorization(options =>
 });
 ```
 
+## Policy names are static; scope values are the dynamic contract
+
+`[Authorize(Policy = "orders.read")]` tells ASP.NET that this endpoint must pass a named authorization
+rule before it can be accessed.
+
+Do not confuse policy names with AdminApp scopes: `orders.read` is your API policy alias, while
+`resource-b.orders.read` is an OAuth scope value in tokens. Policy names can be renamed as long as the
+policy still checks the right scope claim(s).
+
+## What changes if you remove `[Authorize(...)]` from an endpoint?
+
+There is a major security difference:
+
+- `app.MapGet("/orders", [Authorize(Policy = "orders.read")] ...)`
+  - Requires a valid access token.
+  - Requires the token to satisfy the mapped policy/scope requirement.
+  - Returns `401` (no/invalid token) or `403` (token present, missing required scope).
+- `app.MapGet("/orders", () => ...)`
+  - Public endpoint by default.
+  - No token or scope is required for access.
+
+So the significance is not about “hardcoding strings”; it is about whether the endpoint is protected and
+which permissions are required.
+
 ## Optional SDK-style Auth API client
 
 Use this when a resource API also needs to request tokens or call introspection directly:
