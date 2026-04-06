@@ -1,6 +1,13 @@
-# AuthPlaypen.ResourceApiAuth
+# AuthPlaypen.ResourceApi.Sdk
 
-Shared authentication helpers for resource APIs that validate access tokens issued by AuthPlaypen Auth API.
+NuGet package ID: `AuthPlaypen.ResourceApi.Sdk`
+Code namespace: `AuthPlaypen.ResourceApi`
+
+Shared authentication utilities for **resource APIs** that consume AuthPlaypen-issued access tokens.
+It now covers two related concerns:
+
+1. **Inbound token validation** for your API (`AddAuthApiResourceAuthentication`).
+2. **Outbound calls to the Auth API** for token/introspection workflows (`AddAuthApiClient`).
 
 ## Features
 
@@ -12,7 +19,7 @@ Shared authentication helpers for resource APIs that validate access tokens issu
 ## Example (registration + runtime enforcement)
 
 ```csharp
-using AuthPlaypen.ResourceApiAuth;
+using AuthPlaypen.ResourceApi;
 using Microsoft.AspNetCore.Authorization;
 
 builder.Services.AddAuthApiResourceAuthentication(options =>
@@ -48,8 +55,6 @@ app.MapPost("/orders", [Authorize(Policy = "orders.write")] () => Results.Ok("wr
 ```
 
 `RequireAnyScope(...)` uses OR semantics across provided scopes.
-
-
 `Authority` is optional in this package and defaults to `https://localhost:5100`. Override it only if your Auth API host differs.
 
 ## Auth API SDK-style client wrapper
@@ -94,10 +99,10 @@ Typical flow:
 
 ```bash
 # from repository root
-dotnet pack src/AuthPlaypen.ResourceApiAuth/AuthPlaypen.ResourceApiAuth.csproj -c Release
+dotnet pack src/AuthPlaypen.ResourceApi.Sdk/AuthPlaypen.ResourceApi.Sdk.csproj -c Release
 
 # push to NuGet.org
-dotnet nuget push src/AuthPlaypen.ResourceApiAuth/bin/Release/*.nupkg \
+dotnet nuget push src/AuthPlaypen.ResourceApi.Sdk/bin/Release/*.nupkg \
   --api-key <NUGET_API_KEY> \
   --source https://api.nuget.org/v3/index.json
 ```

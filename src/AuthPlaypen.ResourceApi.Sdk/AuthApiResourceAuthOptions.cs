@@ -1,4 +1,4 @@
-namespace AuthPlaypen.ResourceApiAuth;
+namespace AuthPlaypen.ResourceApi;
 
 public sealed class AuthApiResourceAuthOptions
 {

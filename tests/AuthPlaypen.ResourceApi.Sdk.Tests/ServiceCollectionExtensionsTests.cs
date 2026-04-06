@@ -1,4 +1,4 @@
-using AuthPlaypen.ResourceApiAuth;
+using AuthPlaypen.ResourceApi;
 using Duende.AspNetCore.Authentication.OAuth2Introspection;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using Xunit;
 
-namespace AuthPlaypen.ResourceApiAuth.Tests;
+namespace AuthPlaypen.ResourceApi.Tests;
 
 public class ServiceCollectionExtensionsTests
 {

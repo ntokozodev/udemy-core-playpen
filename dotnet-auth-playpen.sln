@@ -12,11 +12,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthPlaypen.Domain", "src\A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthPlaypen.OpenIddict.Redis", "src\AuthPlaypen.OpenIddict.Redis\AuthPlaypen.OpenIddict.Redis.csproj", "{44CC7C1A-3BA9-4BD8-B2A0-911BC94DD93E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthPlaypen.ResourceApiAuth", "src\AuthPlaypen.ResourceApiAuth\AuthPlaypen.ResourceApiAuth.csproj", "{B51A1A0D-3F84-4E86-8BDB-6D07E2CD5F93}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthPlaypen.ResourceApi.Sdk", "src\AuthPlaypen.ResourceApi.Sdk\AuthPlaypen.ResourceApi.Sdk.csproj", "{B51A1A0D-3F84-4E86-8BDB-6D07E2CD5F93}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthPlaypen.Api.Tests", "tests\AuthPlaypen.Api.Tests\AuthPlaypen.Api.Tests.csproj", "{7B9F4AF4-B263-4F0F-B4A6-2C06D5CA5E31}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthPlaypen.ResourceApiAuth.Tests", "tests\AuthPlaypen.ResourceApiAuth.Tests\AuthPlaypen.ResourceApiAuth.Tests.csproj", "{71AD5F89-3046-4F1A-BBF5-04DF32C82B46}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AuthPlaypen.ResourceApi.Sdk.Tests", "tests\AuthPlaypen.ResourceApi.Sdk.Tests\AuthPlaypen.ResourceApi.Sdk.Tests.csproj", "{71AD5F89-3046-4F1A-BBF5-04DF32C82B46}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{A3E01D40-0F86-4A04-B12A-3D4A11A018D8}"
 EndProject

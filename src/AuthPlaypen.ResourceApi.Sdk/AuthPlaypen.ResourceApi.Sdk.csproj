@@ -4,10 +4,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <PackageId>AuthPlaypen.ResourceApiAuth</PackageId>
+    <PackageId>AuthPlaypen.ResourceApi.Sdk</PackageId>
     <Version>0.1.0</Version>
     <Authors>AuthPlaypen</Authors>
-    <Description>Reusable resource API authentication helpers for AuthPlaypen-issued access tokens.</Description>
+    <Description>SDK for AuthPlaypen-protected resource APIs: inbound token validation + outbound Auth API token/introspection client utilities.</Description>
+    <PackageTags>auth;oauth2;openid-connect;resource-api;jwt;introspection;sdk</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

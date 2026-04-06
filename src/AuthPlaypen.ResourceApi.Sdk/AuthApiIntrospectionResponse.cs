@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace AuthPlaypen.ResourceApiAuth;
+namespace AuthPlaypen.ResourceApi;
 
 public sealed class AuthApiIntrospectionResponse
 {

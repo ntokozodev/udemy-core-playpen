@@ -23,4 +23,4 @@ Use this folder for non-core README details so the root README stays focused on 
   Payload/enum examples for Applications and Scopes.
 
 - [resource-api-integration.md](./resource-api-integration.md)  
-  How downstream resource APIs validate tokens and use `AuthPlaypen.ResourceApiAuth`.
+  How downstream resource APIs validate tokens and use `AuthPlaypen.ResourceApi.Sdk` (`AuthPlaypen.ResourceApi` namespace).
