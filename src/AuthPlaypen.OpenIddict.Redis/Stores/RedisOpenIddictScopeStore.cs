@@ -32,7 +32,16 @@ public sealed class RedisOpenIddictScopeStore(IConnectionMultiplexer multiplexer
         }
     }
 
-    public ValueTask<long> CountAsync(CancellationToken cancellationToken) => ValueTask.FromResult(0L);
+    public async ValueTask<long> CountAsync(CancellationToken cancellationToken)
+    {
+        long count = 0;
+        await foreach (var _ in ListAllScopesAsync(cancellationToken))
+        {
+            count++;
+        }
+
+        return count;
+    }
 
     public ValueTask<long> CountAsync<TResult>(Func<IQueryable<RedisOpenIddictScope>, IQueryable<TResult>> query, CancellationToken cancellationToken)
         => throw new NotSupportedException();
@@ -111,11 +120,52 @@ public sealed class RedisOpenIddictScopeStore(IConnectionMultiplexer multiplexer
     public ValueTask<RedisOpenIddictScope> InstantiateAsync(CancellationToken cancellationToken)
         => new(new RedisOpenIddictScope());
 
-    public IAsyncEnumerable<RedisOpenIddictScope> ListAsync(int? count, int? offset, CancellationToken cancellationToken)
-        => RedisAsyncEnumerable.Empty<RedisOpenIddictScope>();
+    public async IAsyncEnumerable<RedisOpenIddictScope> ListAsync(
+        int? count,
+        int? offset,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var skipped = 0;
+        var yielded = 0;
+        var skipCount = Math.Max(offset ?? 0, 0);
+        var takeCount = count.HasValue && count.Value >= 0 ? count.Value : int.MaxValue;
 
-    public IAsyncEnumerable<TResult> ListAsync<TState, TResult>(Func<IQueryable<RedisOpenIddictScope>, TState, IQueryable<TResult>> query, TState state, CancellationToken cancellationToken)
-        => RedisAsyncEnumerable.Empty<TResult>();
+        await foreach (var scope in ListAllScopesAsync(cancellationToken))
+        {
+            if (skipped < skipCount)
+            {
+                skipped++;
+                continue;
+            }
+
+            if (yielded >= takeCount)
+            {
+                yield break;
+            }
+
+            yield return scope;
+            yielded++;
+        }
+    }
+
+    public async IAsyncEnumerable<TResult> ListAsync<TState, TResult>(
+        Func<IQueryable<RedisOpenIddictScope>, TState, IQueryable<TResult>> query,
+        TState state,
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var scopes = new List<RedisOpenIddictScope>();
+        await foreach (var scope in ListAllScopesAsync(cancellationToken))
+        {
+            scopes.Add(scope);
+        }
+
+        var results = query(scopes.AsQueryable(), state);
+        foreach (var result in results)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return result;
+        }
+    }
 
     public ValueTask SetDescriptionAsync(RedisOpenIddictScope scope, string? description, CancellationToken cancellationToken)
     {
