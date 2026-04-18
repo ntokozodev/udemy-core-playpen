@@ -118,6 +118,7 @@ public static class AuthConfigurationExtensions
             var enableOidcAuth = config["AdminApp:Oidc:EnableAuth"];
             var authority = config["AdminApp:Oidc:Authority"];
             var clientId = config["AdminApp:Oidc:ClientId"];
+            var scope = config["AdminApp:Oidc:Scope"];
             var redirectPath = config["AdminApp:Oidc:RedirectPath"];
             var postLogoutRedirectPath = config["AdminApp:Oidc:PostLogoutRedirectPath"];
 
@@ -126,6 +127,7 @@ public static class AuthConfigurationExtensions
                 enableOidcAuth,
                 authority,
                 clientId,
+                scope,
                 redirectPath,
                 postLogoutRedirectPath
             });
@@ -305,6 +307,7 @@ public static class AuthConfigurationExtensions
                 }
 
                 options.AllowAuthorizationCodeFlow()
+                    .AllowRefreshTokenFlow()
                     .AllowClientCredentialsFlow()
                     .RequireProofKeyForCodeExchange();
 
@@ -314,6 +317,7 @@ public static class AuthConfigurationExtensions
 
                 options.UseAspNetCore()
                     .EnableAuthorizationEndpointPassthrough()
+                    .EnableTokenEndpointPassthrough()
                     .EnableEndSessionEndpointPassthrough();
             });
     }

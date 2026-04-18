@@ -20,6 +20,7 @@
 AdminApp__Oidc__EnableAuth=true
 AdminApp__Oidc__Authority=https://login.qa.example.com
 AdminApp__Oidc__ClientId=authkeeper-web-admin
+AdminApp__Oidc__Scope=openid profile offline_access
 AdminApp__Oidc__RedirectPath=/auth/callback
 AdminApp__Oidc__PostLogoutRedirectPath=/
 
