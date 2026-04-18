@@ -21,9 +21,9 @@ public class RedisOpenIddictScopeStoreTests
 
         // Act
         var scopes = new List<RedisOpenIddictScope>();
-        await foreach (var scope in store.ListAsync(count: 1, offset: 1, CancellationToken.None))
+        await foreach (var item in store.ListAsync(count: 1, offset: 1, CancellationToken.None))
         {
-            scopes.Add(scope);
+            scopes.Add(item);
         }
 
         // Assert

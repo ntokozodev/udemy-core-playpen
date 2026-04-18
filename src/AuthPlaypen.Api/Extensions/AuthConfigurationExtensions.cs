@@ -7,15 +7,13 @@ using AuthPlaypen.OpenIddict.Redis.Stores;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using OpenIddict.Abstractions;
-using OpenIddict.Server;
 using StackExchange.Redis;
 using AuthPlaypen.Api.Authentication;
+using AuthPlaypen.Application.Dtos;
 
 namespace AuthPlaypen.Api.Extensions;
 
