@@ -10,7 +10,7 @@ export type OidcConfig = {
   postLogoutRedirectUri: string;
 };
 
-const DEFAULT_OIDC_SCOPE = "openid profile";
+const DEFAULT_OIDC_SCOPE = "openid profile offline_access";
 
 function normalizePath(path: string, fallback: string): string {
   const value = path?.trim() || fallback;
@@ -33,7 +33,7 @@ export function getOidcConfig(): OidcConfig {
   return {
     authority,
     clientId,
-    scope: DEFAULT_OIDC_SCOPE,
+    scope: getConfigValue("VITE_API_OIDC_SCOPE") || DEFAULT_OIDC_SCOPE,
     redirectUri: `${window.location.origin}${redirectPath}`,
     postLogoutRedirectUri: `${window.location.origin}${postLogoutRedirectPath}`,
   };

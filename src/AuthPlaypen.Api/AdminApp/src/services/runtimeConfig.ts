@@ -3,6 +3,7 @@ type RuntimeConfig = Partial<{
   VITE_ENABLE_OIDC_AUTH: string;
   VITE_API_OIDC_AUTHORITY: string;
   VITE_API_OIDC_CLIENT_ID: string;
+  VITE_API_OIDC_SCOPE: string;
   VITE_OIDC_REDIRECT_PATH: string;
   VITE_OIDC_POST_LOGOUT_REDIRECT_PATH: string;
   VITE_LOCAL_RUN_MODE: string;
@@ -12,6 +13,7 @@ type AppConfigResponse = Partial<{
   enableOidcAuth: boolean;
   authority: string;
   clientId: string;
+  scope: string;
   redirectPath: string;
   postLogoutRedirectPath: string;
 }>;
@@ -27,6 +29,7 @@ const buildTimeRuntimeConfig: RuntimeConfig = {
   VITE_ENABLE_OIDC_AUTH: import.meta.env.VITE_ENABLE_OIDC_AUTH,
   VITE_API_OIDC_AUTHORITY: import.meta.env.VITE_API_OIDC_AUTHORITY,
   VITE_API_OIDC_CLIENT_ID: import.meta.env.VITE_API_OIDC_CLIENT_ID,
+  VITE_API_OIDC_SCOPE: import.meta.env.VITE_API_OIDC_SCOPE,
   VITE_OIDC_REDIRECT_PATH: import.meta.env.VITE_OIDC_REDIRECT_PATH,
   VITE_OIDC_POST_LOGOUT_REDIRECT_PATH: import.meta.env.VITE_OIDC_POST_LOGOUT_REDIRECT_PATH,
   VITE_LOCAL_RUN_MODE: import.meta.env.VITE_LOCAL_RUN_MODE,
@@ -61,6 +64,7 @@ function applyApiRuntimeConfig(config: AppConfigResponse): void {
   setRuntimeConfigValue(runtimeConfig, "VITE_ENABLE_OIDC_AUTH", config.enableOidcAuth);
   setRuntimeConfigValue(runtimeConfig, "VITE_API_OIDC_AUTHORITY", config.authority);
   setRuntimeConfigValue(runtimeConfig, "VITE_API_OIDC_CLIENT_ID", config.clientId);
+  setRuntimeConfigValue(runtimeConfig, "VITE_API_OIDC_SCOPE", config.scope);
   setRuntimeConfigValue(runtimeConfig, "VITE_OIDC_REDIRECT_PATH", config.redirectPath);
   setRuntimeConfigValue(runtimeConfig, "VITE_OIDC_POST_LOGOUT_REDIRECT_PATH", config.postLogoutRedirectPath);
 }

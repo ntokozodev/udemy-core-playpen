@@ -15,7 +15,7 @@ function getUserManager(): UserManager {
       post_logout_redirect_uri: config.postLogoutRedirectUri,
       scope: config.scope,
       userStore: new WebStorageStateStore({ store: window.sessionStorage }),
-      automaticSilentRenew: false,
+      automaticSilentRenew: true,
       monitorSession: false,
       loadUserInfo: false,
     });
