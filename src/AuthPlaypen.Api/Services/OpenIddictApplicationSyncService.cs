@@ -59,6 +59,7 @@ public sealed class OpenIddictApplicationSyncService(IOpenIddictApplicationManag
         if (dto.Flow == ApplicationFlow.AuthorizationWithPKCE)
         {
             descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode);
+            descriptor.Permissions.Add(OpenIddictConstants.Permissions.GrantTypes.RefreshToken);
             descriptor.Permissions.Add(OpenIddictConstants.Permissions.ResponseTypes.Code);
             descriptor.Requirements.Add(OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange);
 
