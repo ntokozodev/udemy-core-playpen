@@ -32,6 +32,7 @@
 3. If needed, API challenges Azure AD/O365.
 4. API returns authorization code.
 5. Frontend exchanges code + verifier at `/connect/token`.
+6. If `offline_access` was requested and granted, frontend can later use `refresh_token` at `/connect/token`.
 
 ## Client credentials high-level flow
 

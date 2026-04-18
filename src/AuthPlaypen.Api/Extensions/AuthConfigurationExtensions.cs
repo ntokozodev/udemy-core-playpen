@@ -305,6 +305,7 @@ public static class AuthConfigurationExtensions
                 }
 
                 options.AllowAuthorizationCodeFlow()
+                    .AllowRefreshTokenFlow()
                     .AllowClientCredentialsFlow()
                     .RequireProofKeyForCodeExchange();
 
@@ -314,6 +315,7 @@ public static class AuthConfigurationExtensions
 
                 options.UseAspNetCore()
                     .EnableAuthorizationEndpointPassthrough()
+                    .EnableTokenEndpointPassthrough()
                     .EnableEndSessionEndpointPassthrough();
             });
     }
