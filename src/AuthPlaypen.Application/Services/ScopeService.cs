@@ -2,12 +2,14 @@ using AuthPlaypen.Data.Data;
 using AuthPlaypen.Application.Dtos;
 using AuthPlaypen.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace AuthPlaypen.Application.Services;
 
 public class ScopeService(
     AuthPlaypenDbContext dbContext,
-    IOpenIddictSyncOrchestrator<ScopeDto> openIddictScopeSyncService) : IScopeService
+    IOpenIddictSyncOrchestrator<ScopeDto> openIddictScopeSyncService,
+    IActorContextService actorContextService) : IScopeService
 {
     public async Task<CursorPagedResultDto<ScopeDto>> GetPageAsync(Guid? cursor, int pageSize, CancellationToken cancellationToken)
     {
@@ -76,16 +78,20 @@ public class ScopeService(
             }
         }
 
+        var actor = actorContextService.GetCurrentActor();
+        var actorDescriptor = BuildActorDescriptor(actor);
+        var now = DateTimeOffset.UtcNow;
+
         var scope = new ScopeEntity
         {
             Id = Guid.NewGuid(),
             DisplayName = request.DisplayName,
             ScopeName = request.ScopeName,
             Description = request.Description,
-            CreatedBy = "Unknown",
-            UpdatedBy = "Unknown",
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
+            CreatedBy = actorDescriptor,
+            UpdatedBy = actorDescriptor,
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         foreach (var appId in appIds)
@@ -98,6 +104,13 @@ public class ScopeService(
         }
 
         dbContext.Scopes.Add(scope);
+        dbContext.EntityAuditHistory.Add(CreateAuditEntry("scope", scope.Id, "created", actor, now, new
+        {
+            scope.DisplayName,
+            scope.ScopeName,
+            scope.Description,
+            ApplicationIds = appIds
+        }));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var reloaded = await dbContext.Scopes
@@ -138,11 +151,14 @@ public class ScopeService(
             }
         }
 
+        var actor = actorContextService.GetCurrentActor();
+        var now = DateTimeOffset.UtcNow;
+
         scope.DisplayName = request.DisplayName;
         scope.ScopeName = request.ScopeName;
         scope.Description = request.Description;
-        scope.UpdatedBy = "Unknown";
-        scope.UpdatedAt = DateTimeOffset.UtcNow;
+        scope.UpdatedBy = BuildActorDescriptor(actor);
+        scope.UpdatedAt = now;
         scope.ApplicationScopes.Clear();
         foreach (var appId in appIds)
         {
@@ -153,6 +169,13 @@ public class ScopeService(
             });
         }
 
+        dbContext.EntityAuditHistory.Add(CreateAuditEntry("scope", scope.Id, "updated", actor, now, new
+        {
+            scope.DisplayName,
+            scope.ScopeName,
+            scope.Description,
+            ApplicationIds = appIds
+        }));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var reloaded = await dbContext.Scopes
@@ -178,11 +201,19 @@ public class ScopeService(
             return (false, null, true);
         }
 
+        var actor = actorContextService.GetCurrentActor();
+        var now = DateTimeOffset.UtcNow;
+
         if (scope.ApplicationScopes.Count > 0)
         {
             dbContext.ApplicationScopes.RemoveRange(scope.ApplicationScopes);
         }
 
+        dbContext.EntityAuditHistory.Add(CreateAuditEntry("scope", scope.Id, "deleted", actor, now, new
+        {
+            scope.DisplayName,
+            scope.ScopeName
+        }));
         dbContext.Scopes.Remove(scope);
         await dbContext.SaveChangesAsync(cancellationToken);
         await openIddictScopeSyncService.HandleDeletionAsync(id, cancellationToken);
@@ -207,5 +238,27 @@ public class ScopeService(
             scope.Description,
             applications,
             new EntityMetadataDto(scope.CreatedBy, scope.CreatedAt, scope.UpdatedBy, scope.UpdatedAt));
+    }
+
+    private static EntityAuditHistoryEntry CreateAuditEntry(string entityType, Guid entityId, string action, ActorContext actor, DateTimeOffset occurredAt, object summary)
+    {
+        return new EntityAuditHistoryEntry
+        {
+            Id = Guid.NewGuid(),
+            EntityType = entityType,
+            EntityId = entityId,
+            Action = action,
+            ActorDisplayName = actor.DisplayName,
+            ActorEmail = actor.Email,
+            OccurredAt = occurredAt,
+            ChangeSummaryJson = JsonSerializer.Serialize(summary)
+        };
+    }
+
+    private static string BuildActorDescriptor(ActorContext actor)
+    {
+        return string.IsNullOrWhiteSpace(actor.Email)
+            ? actor.DisplayName
+            : $"{actor.DisplayName} <{actor.Email}>";
     }
 }

@@ -8,6 +8,7 @@ public class AuthPlaypenDbContext(DbContextOptions<AuthPlaypenDbContext> options
     public DbSet<ApplicationEntity> Applications => Set<ApplicationEntity>();
     public DbSet<ScopeEntity> Scopes => Set<ScopeEntity>();
     public DbSet<ApplicationScopeEntity> ApplicationScopes => Set<ApplicationScopeEntity>();
+    public DbSet<EntityAuditHistoryEntry> EntityAuditHistory => Set<EntityAuditHistoryEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -54,6 +55,20 @@ public class AuthPlaypenDbContext(DbContextOptions<AuthPlaypenDbContext> options
                 .WithMany(x => x.ApplicationScopes)
                 .HasForeignKey(x => x.ScopeId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EntityAuditHistoryEntry>(entity =>
+        {
+            entity.ToTable("entity_audit_history");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.EntityType).IsRequired();
+            entity.Property(x => x.EntityId).IsRequired();
+            entity.Property(x => x.Action).IsRequired();
+            entity.Property(x => x.ActorDisplayName).IsRequired();
+            entity.Property(x => x.ActorEmail);
+            entity.Property(x => x.OccurredAt).IsRequired();
+            entity.Property(x => x.ChangeSummaryJson);
+            entity.HasIndex(x => new { x.EntityType, x.EntityId, x.OccurredAt });
         });
     }
 }

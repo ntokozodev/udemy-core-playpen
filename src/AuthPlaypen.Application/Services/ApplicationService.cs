@@ -2,12 +2,14 @@ using AuthPlaypen.Data.Data;
 using AuthPlaypen.Application.Dtos;
 using AuthPlaypen.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace AuthPlaypen.Application.Services;
 
 public class ApplicationService(
     AuthPlaypenDbContext dbContext,
-    IOpenIddictSyncOrchestrator<ApplicationDto> openIddictApplicationSyncService) : IApplicationService
+    IOpenIddictSyncOrchestrator<ApplicationDto> openIddictApplicationSyncService,
+    IActorContextService actorContextService) : IApplicationService
 {
     public async Task<CursorPagedResultDto<ApplicationDto>> GetPageAsync(Guid? cursor, int pageSize, CancellationToken cancellationToken)
     {
@@ -77,6 +79,10 @@ public class ApplicationService(
             return (null, redirectUrisValidationError);
         }
 
+        var actor = actorContextService.GetCurrentActor();
+        var actorDescriptor = BuildActorDescriptor(actor);
+        var now = DateTimeOffset.UtcNow;
+
         var application = new ApplicationEntity
         {
             Id = Guid.NewGuid(),
@@ -86,10 +92,10 @@ public class ApplicationService(
             Flow = request.Flow,
             PostLogoutRedirectUris = request.PostLogoutRedirectUris,
             RedirectUris = request.RedirectUris,
-            CreatedBy = "Unknown",
-            UpdatedBy = "Unknown",
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
+            CreatedBy = actorDescriptor,
+            UpdatedBy = actorDescriptor,
+            CreatedAt = now,
+            UpdatedAt = now
         };
 
         var scopeIds = request.ScopeIds?.Distinct().ToList() ?? [];
@@ -120,6 +126,13 @@ public class ApplicationService(
         }
 
         dbContext.Applications.Add(application);
+        dbContext.EntityAuditHistory.Add(CreateAuditEntry("application", application.Id, "created", actor, now, new
+        {
+            application.DisplayName,
+            application.ClientId,
+            application.Flow,
+            ScopeIds = scopeIds
+        }));
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var dto = ToDto(application);
@@ -169,14 +182,17 @@ public class ApplicationService(
             return (null, scopeValidationError, false);
         }
 
+        var actor = actorContextService.GetCurrentActor();
+        var now = DateTimeOffset.UtcNow;
+
         application.DisplayName = request.DisplayName;
         application.ClientId = request.ClientId;
         application.ClientSecret = request.ClientSecret;
         application.Flow = request.Flow;
         application.PostLogoutRedirectUris = request.PostLogoutRedirectUris;
         application.RedirectUris = request.RedirectUris;
-        application.UpdatedBy = "Unknown";
-        application.UpdatedAt = DateTimeOffset.UtcNow;
+        application.UpdatedBy = BuildActorDescriptor(actor);
+        application.UpdatedAt = now;
 
         application.ApplicationScopes.Clear();
         foreach (var scope in scopes)
@@ -188,6 +204,13 @@ public class ApplicationService(
             });
         }
 
+        dbContext.EntityAuditHistory.Add(CreateAuditEntry("application", application.Id, "updated", actor, now, new
+        {
+            application.DisplayName,
+            application.ClientId,
+            application.Flow,
+            ScopeIds = scopeIds
+        }));
         await dbContext.SaveChangesAsync(cancellationToken);
         var dto = ToDto(application);
         await openIddictApplicationSyncService.HandleUpdateAsync(dto, cancellationToken);
@@ -206,11 +229,19 @@ public class ApplicationService(
             return false;
         }
 
+        var actor = actorContextService.GetCurrentActor();
+        var now = DateTimeOffset.UtcNow;
+
         if (application.ApplicationScopes.Count > 0)
         {
             dbContext.ApplicationScopes.RemoveRange(application.ApplicationScopes);
         }
 
+        dbContext.EntityAuditHistory.Add(CreateAuditEntry("application", application.Id, "deleted", actor, now, new
+        {
+            application.DisplayName,
+            application.ClientId
+        }));
         dbContext.Applications.Remove(application);
         await dbContext.SaveChangesAsync(cancellationToken);
         await openIddictApplicationSyncService.HandleDeletionAsync(id, cancellationToken);
@@ -263,5 +294,27 @@ public class ApplicationService(
         }
 
         return null;
+    }
+
+    private static EntityAuditHistoryEntry CreateAuditEntry(string entityType, Guid entityId, string action, ActorContext actor, DateTimeOffset occurredAt, object summary)
+    {
+        return new EntityAuditHistoryEntry
+        {
+            Id = Guid.NewGuid(),
+            EntityType = entityType,
+            EntityId = entityId,
+            Action = action,
+            ActorDisplayName = actor.DisplayName,
+            ActorEmail = actor.Email,
+            OccurredAt = occurredAt,
+            ChangeSummaryJson = JsonSerializer.Serialize(summary)
+        };
+    }
+
+    private static string BuildActorDescriptor(ActorContext actor)
+    {
+        return string.IsNullOrWhiteSpace(actor.Email)
+            ? actor.DisplayName
+            : $"{actor.DisplayName} <{actor.Email}>";
     }
 }
