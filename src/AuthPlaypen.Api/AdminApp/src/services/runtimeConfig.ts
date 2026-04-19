@@ -81,7 +81,7 @@ function initializeRuntimeConfig(): void {
 }
 
 function isLocalRunModeEnabled(): boolean {
-  return import.meta.env.MODE === "localmock";
+  return import.meta.env.MODE === "development";
 }
 
 export async function loadRuntimeConfig(): Promise<void> {
