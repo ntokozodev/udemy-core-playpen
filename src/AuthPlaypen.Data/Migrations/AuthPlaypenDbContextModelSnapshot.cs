@@ -86,6 +86,43 @@ partial class AuthPlaypenDbContextModelSnapshot : ModelSnapshot
             b.ToTable("application_scopes");
         });
 
+        modelBuilder.Entity("AuthPlaypen.Domain.Entities.EntityAuditHistoryEntry", b =>
+        {
+            b.Property<Guid>("Id")
+                .ValueGeneratedOnAdd()
+                .HasColumnType("uuid");
+
+            b.Property<string>("Action")
+                .IsRequired()
+                .HasColumnType("text");
+
+            b.Property<string>("ActorDisplayName")
+                .IsRequired()
+                .HasColumnType("text");
+
+            b.Property<string>("ActorEmail")
+                .HasColumnType("text");
+
+            b.Property<string>("ChangeSummaryJson")
+                .HasColumnType("text");
+
+            b.Property<Guid>("EntityId")
+                .HasColumnType("uuid");
+
+            b.Property<string>("EntityType")
+                .IsRequired()
+                .HasColumnType("text");
+
+            b.Property<DateTimeOffset>("OccurredAt")
+                .HasColumnType("timestamp with time zone");
+
+            b.HasKey("Id");
+
+            b.HasIndex("EntityType", "EntityId", "OccurredAt");
+
+            b.ToTable("entity_audit_history");
+        });
+
         modelBuilder.Entity("AuthPlaypen.Domain.Entities.ScopeEntity", b =>
         {
             b.Property<Guid>("Id")

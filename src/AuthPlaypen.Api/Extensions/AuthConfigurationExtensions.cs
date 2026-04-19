@@ -33,6 +33,7 @@ public static class AuthConfigurationExtensions
         services.AddAuthPlaypenOpenIddict(configuration, environment);
         services.AddAuthPlaypenData(configuration);
         services.AddAuthPlaypenApplicationServices();
+        services.AddHttpContextAccessor();
 
         return services;
     }
@@ -340,6 +341,7 @@ public static class AuthConfigurationExtensions
         services.AddScoped<IScopeService, ScopeService>();
         services.AddScoped<IOpenIddictSyncOrchestrator<ScopeDto>, OpenIddictScopeSyncService>();
         services.AddScoped<IOpenIddictSyncOrchestrator<ApplicationDto>, OpenIddictApplicationSyncService>();
+        services.AddScoped<IActorContextService, ActorContextService>();
     }
 
     private static void ConfigureSigningCertificate(OpenIddictServerBuilder options, IConfiguration configuration, IHostEnvironment environment)
