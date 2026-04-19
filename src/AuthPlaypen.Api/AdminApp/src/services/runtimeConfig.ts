@@ -6,7 +6,6 @@ type RuntimeConfig = Partial<{
   VITE_API_OIDC_SCOPE: string;
   VITE_OIDC_REDIRECT_PATH: string;
   VITE_OIDC_POST_LOGOUT_REDIRECT_PATH: string;
-  VITE_LOCAL_RUN_MODE: string;
 }>;
 
 type AppConfigResponse = Partial<{
@@ -32,7 +31,6 @@ const buildTimeRuntimeConfig: RuntimeConfig = {
   VITE_API_OIDC_SCOPE: import.meta.env.VITE_API_OIDC_SCOPE,
   VITE_OIDC_REDIRECT_PATH: import.meta.env.VITE_OIDC_REDIRECT_PATH,
   VITE_OIDC_POST_LOGOUT_REDIRECT_PATH: import.meta.env.VITE_OIDC_POST_LOGOUT_REDIRECT_PATH,
-  VITE_LOCAL_RUN_MODE: import.meta.env.VITE_LOCAL_RUN_MODE,
 };
 
 function readRuntimeConfigValue(key: keyof RuntimeConfig): string | undefined {
@@ -83,11 +81,15 @@ function initializeRuntimeConfig(): void {
 }
 
 function isLocalRunModeEnabled(): boolean {
-  return getConfigValue("VITE_LOCAL_RUN_MODE") === "true";
+  return import.meta.env.MODE === "localmock";
 }
 
 export async function loadRuntimeConfig(): Promise<void> {
   initializeRuntimeConfig();
+
+  if (isLocalRunModeEnabled()) {
+    return;
+  }
 
   try {
     const response = await fetch("/app-config", { cache: "no-store" });

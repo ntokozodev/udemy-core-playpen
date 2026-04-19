@@ -13,29 +13,24 @@ import { EditScope } from "@/pages/EditScope";
 import { ScopeDetails } from "@/pages/ScopeDetails";
 import { Scopes } from "@/pages/Scopes";
 
-function ProtectedLayout() {
-  return (
-    <RequireAuth>
-      <MainLayout />
-    </RequireAuth>
-  );
-}
-
 export default function App() {
   return (
-    <Router base="/admin">
+    <Router>
       <Route path="/auth/callback" component={AuthCallback} />
       <Route path="/auth/logout-callback" component={AuthLogoutCallback} />
-      <Route component={ProtectedLayout}>
-        <Route path="/" component={Dashboard} />
-        <Route path="/applications" component={Applications} />
-        <Route path="/applications/create" component={CreateApplication} />
-        <Route path="/applications/:id" component={ApplicationDetails} />
-        <Route path="/applications/:id/edit" component={EditApplication} />
-        <Route path="/scopes" component={Scopes} />
-        <Route path="/scopes/create" component={CreateScope} />
-        <Route path="/scopes/:id" component={ScopeDetails} />
-        <Route path="/scopes/:id/edit" component={EditScope} />
+
+      <Route component={RequireAuth}>
+        <Route component={MainLayout}>
+          <Route path="/" component={Dashboard} />
+          <Route path="/applications" component={Applications} />
+          <Route path="/applications/create" component={CreateApplication} />
+          <Route path="/applications/:id" component={ApplicationDetails} />
+          <Route path="/applications/:id/edit" component={EditApplication} />
+          <Route path="/scopes" component={Scopes} />
+          <Route path="/scopes/create" component={CreateScope} />
+          <Route path="/scopes/:id" component={ScopeDetails} />
+          <Route path="/scopes/:id/edit" component={EditScope} />
+        </Route>
       </Route>
     </Router>
   );
