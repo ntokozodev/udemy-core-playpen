@@ -5,8 +5,8 @@ import solidPlugin from "vite-plugin-solid";
 import tsConfigPaths from "vite-tsconfig-paths";
 import devtools from "solid-devtools/vite";
 
-export default defineConfig(({ command }) => ({
-  base: command === "build" ? "/admin/" : "/",
+export default defineConfig(() => ({
+  base: "/admin/",
   plugins: [devtools(), solidPlugin(), tailwindcss(), tsConfigPaths()],
   server: {
     port: 3000,
