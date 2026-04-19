@@ -52,6 +52,25 @@ public partial class InitialCreate : Migration
                 table.PrimaryKey("PK_scopes", x => x.Id);
             });
 
+
+        migrationBuilder.CreateTable(
+            name: "entity_audit_history",
+            columns: table => new
+            {
+                Id = table.Column<Guid>(type: "uuid", nullable: false),
+                EntityType = table.Column<string>(type: "text", nullable: false),
+                EntityId = table.Column<Guid>(type: "uuid", nullable: false),
+                Action = table.Column<string>(type: "text", nullable: false),
+                ActorDisplayName = table.Column<string>(type: "text", nullable: false),
+                ActorEmail = table.Column<string>(type: "text", nullable: true),
+                OccurredAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                ChangeSummaryJson = table.Column<string>(type: "text", nullable: true)
+            },
+            constraints: table =>
+            {
+                table.PrimaryKey("PK_entity_audit_history", x => x.Id);
+            });
+
         migrationBuilder.CreateTable(
             name: "application_scopes",
             columns: table => new
@@ -77,6 +96,11 @@ public partial class InitialCreate : Migration
             });
 
         migrationBuilder.CreateIndex(
+            name: "IX_entity_audit_history_EntityType_EntityId_OccurredAt",
+            table: "entity_audit_history",
+            columns: new[] { "EntityType", "EntityId", "OccurredAt" });
+
+        migrationBuilder.CreateIndex(
             name: "IX_application_scopes_ScopeId",
             table: "application_scopes",
             column: "ScopeId");
@@ -96,6 +120,9 @@ public partial class InitialCreate : Migration
 
     protected override void Down(MigrationBuilder migrationBuilder)
     {
+        migrationBuilder.DropTable(
+            name: "entity_audit_history");
+
         migrationBuilder.DropTable(
             name: "application_scopes");
 
