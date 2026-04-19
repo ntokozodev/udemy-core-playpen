@@ -35,7 +35,7 @@ AzureAd__CallbackPath=/signin-oidc
 For isolated UI work:
 
 ```bash
-npm run dev:local-mock
+npm run dev
 ```
 
 This mode allows boot without `/app-config` and forces mock API usage.

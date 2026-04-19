@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "dev:local-mock": "vite --mode localmock"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@solidjs/router": "^0.15.3",
