@@ -19,7 +19,7 @@ public class OpenIddictApplicationSyncServiceTests
         manager
             .Setup(m => m.CreateAsync(It.IsAny<OpenIddictApplicationDescriptor>(), It.IsAny<CancellationToken>()))
             .Callback<OpenIddictApplicationDescriptor, CancellationToken>((descriptor, _) => capturedDescriptor = descriptor)
-            .Returns(ValueTask.CompletedTask);
+            .Returns(new ValueTask<object>(new object()));
 
         var service = new OpenIddictApplicationSyncService(manager.Object);
 
