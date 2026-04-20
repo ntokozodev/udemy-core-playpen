@@ -48,3 +48,9 @@ export type CursorPage<T> = {
 
 export type CreateApplicationRequest = Omit<Application, "id" | "scopes" | "metadata"> & { scopeIds: string[] };
 export type CreateScopeRequest = Omit<Scope, "id" | "applications" | "metadata"> & { applicationIds?: string[] };
+
+export type AdminUser = {
+  displayName: string;
+  email?: string | null;
+  isSystem: boolean;
+};

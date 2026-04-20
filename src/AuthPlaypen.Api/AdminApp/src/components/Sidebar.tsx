@@ -4,10 +4,12 @@ import { Show } from "solid-js";
 import { isOidcAuthEnabled } from "@/services/authConfig";
 import { signOut } from "@/services/authService";
 import { AppIcon, ScopeIcon } from "@/layouts/Icons";
+import type { AdminUser } from "@/types/models";
 
 type SidebarProps = {
   collapsed?: boolean;
   onToggle?: () => void;
+  user?: AdminUser;
 };
 
 const activeClasses = "bg-brand-accent text-brand-dark font-semibold";
@@ -72,7 +74,30 @@ const Sidebar: Component<SidebarProps> = (props) => {
         </Show>
       </nav>
 
-      <div class="mt-auto pt-6">
+      <div class="mt-auto pt-6 space-y-3">
+        <Show when={props.user}>
+          {(user) => (
+            <div
+              class={`rounded-lg bg-white/10 text-white ${
+                props.collapsed ? "flex h-10 w-full items-center justify-center" : "flex items-center gap-3 px-3 py-2"
+              }`}
+              title={props.collapsed ? user().displayName : undefined}
+            >
+              <div class="flex h-7 w-7 items-center justify-center rounded-full bg-brand-accent font-semibold text-brand-dark">
+                {user().displayName.charAt(0).toUpperCase()}
+              </div>
+              <Show when={!props.collapsed}>
+                <div class="min-w-0">
+                  <div class="truncate text-sm font-semibold">{user().displayName}</div>
+                  <Show when={user().email}>
+                    <div class="truncate text-xs text-white/80">{user().email}</div>
+                  </Show>
+                </div>
+              </Show>
+            </div>
+          )}
+        </Show>
+
         <button
           type="button"
           onClick={() => props.onToggle?.()}
