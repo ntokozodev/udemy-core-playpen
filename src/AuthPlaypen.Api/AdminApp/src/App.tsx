@@ -15,7 +15,7 @@ import { Scopes } from "@/pages/Scopes";
 
 export default function App() {
   return (
-    <Router>
+    <Router base="/">
       <Route path="/auth/callback" component={AuthCallback} />
       <Route path="/auth/logout-callback" component={AuthLogoutCallback} />
 

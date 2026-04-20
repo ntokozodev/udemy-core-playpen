@@ -6,7 +6,6 @@ namespace AuthPlaypen.Api.Controllers;
 [ApiController]
 [ApiExplorerSettings(GroupName = "admin")]
 [Route("admin/api/[controller]")]
-[Route("api/[controller]")]
 public class UserController(IActorContextService actorContextService) : ControllerBase
 {
     [HttpGet]

@@ -8,7 +8,6 @@ namespace AuthPlaypen.Api.Controllers;
 [ApiController]
 [ApiExplorerSettings(GroupName = "admin")]
 [Route("admin/api/[controller]")]
-[Route("api/[controller]")]
 public class ApplicationsController(IApplicationService applicationService) : ControllerBase
 {
     [HttpGet]
