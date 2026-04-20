@@ -55,6 +55,14 @@ export async function mockHttp<T>(path: string, init?: RequestInit): Promise<T> 
   const method = (init?.method ?? "GET").toUpperCase();
   const { pathname, params } = query(path);
 
+  if (method === "GET" && pathname === "/user") {
+    return {
+      displayName: "System",
+      email: null,
+      isSystem: true,
+    } as T;
+  }
+
   if (method === "GET" && pathname === "/applications") {
     const pageSize = Number(params.get("pageSize") ?? "10");
     const cursor = params.get("cursor") ?? undefined;

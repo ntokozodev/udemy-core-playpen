@@ -2,6 +2,7 @@ import Sidebar from "@/components/Sidebar";
 import type { RouteSectionProps } from "@solidjs/router";
 import type { Component } from "solid-js";
 import { createEffect, createSignal, onMount } from "solid-js";
+import { useCurrentUser } from "@/queries/userQueries";
 
 type Theme = "light" | "dark";
 
@@ -26,6 +27,7 @@ export const MainLayout: Component<RouteSectionProps> = (props) => {
   const [mobileOpen, setMobileOpen] = createSignal(false);
   const [collapsed, setCollapsed] = createSignal(false);
   const [theme, setTheme] = createSignal<Theme>("light");
+  const currentUserQuery = useCurrentUser();
 
   onMount(() => {
     setTheme(getPreferredTheme());
@@ -44,7 +46,7 @@ export const MainLayout: Component<RouteSectionProps> = (props) => {
   return (
     <div class="h-screen flex overflow-hidden bg-[var(--app-bg)] text-[var(--text-primary)] transition-colors duration-300">
       <div class="hidden md:block">
-        <Sidebar collapsed={collapsed()} onToggle={() => setCollapsed(!collapsed())} />
+        <Sidebar collapsed={collapsed()} onToggle={() => setCollapsed(!collapsed())} user={currentUserQuery.data} />
       </div>
 
       <div class="relative flex-1 flex flex-col min-h-0 transition-all duration-300 bg-[var(--app-bg)]">
@@ -93,7 +95,7 @@ export const MainLayout: Component<RouteSectionProps> = (props) => {
           transform transition-transform duration-300 md:hidden
           ${mobileOpen() ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <Sidebar onToggle={() => setMobileOpen(false)} />
+        <Sidebar onToggle={() => setMobileOpen(false)} user={currentUserQuery.data} />
       </div>
     </div>
   );

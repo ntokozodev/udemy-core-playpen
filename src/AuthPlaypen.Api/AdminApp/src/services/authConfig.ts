@@ -27,8 +27,8 @@ export function getOidcConfig(): OidcConfig {
     );
   }
 
-  const redirectPath = normalizePath(getConfigValue("VITE_OIDC_REDIRECT_PATH"), "/admin/auth/callback");
-  const postLogoutRedirectPath = normalizePath(getConfigValue("VITE_OIDC_POST_LOGOUT_REDIRECT_PATH"), "/admin/auth/logout-callback");
+  const redirectPath = normalizePath(getConfigValue("VITE_OIDC_REDIRECT_PATH"), "/auth/callback");
+  const postLogoutRedirectPath = normalizePath(getConfigValue("VITE_OIDC_POST_LOGOUT_REDIRECT_PATH"), "/auth/logout-callback");
 
   return {
     authority,

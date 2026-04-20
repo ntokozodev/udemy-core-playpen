@@ -10,7 +10,7 @@ public sealed class ActorContextService(
     IWebHostEnvironment environment,
     IConfiguration configuration) : IActorContextService
 {
-    private const string SystemActor = "system";
+    private const string SystemActor = "System";
 
     public ActorContext GetCurrentActor()
     {

@@ -6,14 +6,13 @@ import tsConfigPaths from "vite-tsconfig-paths";
 import devtools from "solid-devtools/vite";
 
 export default defineConfig(() => ({
-  base: "/admin/",
   plugins: [devtools(), solidPlugin(), tailwindcss(), tsConfigPaths()],
   server: {
     port: 3000,
   },
   build: {
     target: "esnext",
-    outDir: resolve(__dirname, "../wwwroot/admin"),
+    outDir: resolve(__dirname, "../wwwroot"),
     emptyOutDir: true,
   },
 }));

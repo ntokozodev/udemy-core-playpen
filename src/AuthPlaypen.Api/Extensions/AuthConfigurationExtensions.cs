@@ -134,8 +134,8 @@ public static class AuthConfigurationExtensions
             });
         }).WithGroupName(AdminDocName);
 
-        app.MapFallbackToFile("/admin/{*path:nonfile}", "admin/index.html");
         app.MapControllers();
+        app.MapFallbackToFile("/{*path:nonfile}", "index.html");
     }
 
     private static void AddAuthPlaypenSwagger(this IServiceCollection services, IConfiguration configuration, IHostEnvironment environment)
