@@ -10,7 +10,7 @@
 - `AuthPlaypen.Data` - EF Core persistence, migrations, design-time factory.
 - `AuthPlaypen.Domain` - domain model/enums.
 - `AuthPlaypen.OpenIddict.Redis` - Redis-backed OpenIddict stores/models.
-- `AuthPlaypen.ResourceApi.Sdk` - reusable auth helpers for resource APIs.
+- `AuthPlaypen.Client.Sdk` - reusable outbound client for token and metadata operations against AuthPlaypen.
 
 ## Strict ownership rules
 

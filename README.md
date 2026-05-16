@@ -31,7 +31,7 @@ For usage, integration, and deeper reference docs, use the docs index: [./docs/R
 - `src/AuthPlaypen.Data` - EF Core `DbContext`, mappings, migrations, design-time factory.
 - `src/AuthPlaypen.Domain` - core entities and enums.
 - `src/AuthPlaypen.OpenIddict.Redis` - Redis OpenIddict stores/models.
-- `src/AuthPlaypen.ResourceApi.Sdk` - reusable downstream resource API auth SDK package (`AuthPlaypen.ResourceApi.Sdk` on NuGet).
+- `src/AuthPlaypen.Client.Sdk` - outbound AuthPlaypen client SDK package (`AuthPlaypen.Client.Sdk` on NuGet).
 - `tests/AuthPlaypen.Api.Tests` - API test suite.
 
 ## Local development quick start
@@ -123,4 +123,4 @@ If a change is persistence-specific, it belongs in `AuthPlaypen.Data`.
 - Runtime/AdminApp configuration: [docs/runtime-configuration.md](./docs/runtime-configuration.md)
 - OpenIddict endpoints + token flows: [docs/openiddict-and-flows.md](./docs/openiddict-and-flows.md)
 - API payload contracts: [docs/api-contracts.md](./docs/api-contracts.md)
-- Resource API integration package usage: [docs/resource-api-integration.md](./docs/resource-api-integration.md)
+- Client SDK usage guide: [src/AuthPlaypen.Client.Sdk/README.md](./src/AuthPlaypen.Client.Sdk/README.md)
