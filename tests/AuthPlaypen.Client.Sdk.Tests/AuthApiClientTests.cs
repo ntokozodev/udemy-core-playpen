@@ -49,6 +49,35 @@ public class AuthApiClientTests
     }
 
     [Fact]
+    public async Task RequestClientCredentialsTokenAsync_WithoutScopes_DoesNotSendScopeField()
+    {
+        HttpRequestMessage? capturedRequest = null;
+        var handler = new StubHttpMessageHandler(async request =>
+        {
+            capturedRequest = request;
+            var json = """
+                {
+                  "access_token": "token-123",
+                  "token_type": "Bearer",
+                  "expires_in": 3600
+                }
+                """;
+            return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+        });
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://auth.local") };
+        var client = BuildClient(httpClient);
+
+        _ = await client.RequestClientCredentialsTokenAsync();
+
+        var body = await capturedRequest!.Content!.ReadAsStringAsync();
+        Assert.DoesNotContain("scope=", body);
+    }
+
+    [Fact]
     public async Task IntrospectTokenAsync_ThrowsFriendlyException_WhenApiFails()
     {
         var handler = new StubHttpMessageHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
@@ -90,6 +119,39 @@ public class AuthApiClientTests
         Assert.Equal(2, map.Count);
         Assert.Equal(["orders.read", "orders.list"], map["orders.read"]);
         Assert.Equal(["orders.write"], map["orders.write"]);
+    }
+
+    [Fact]
+    public async Task GetJsonWebKeySetAsync_UsesDiscoveryDocumentJwksUri()
+    {
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/.well-known/openid-configuration")
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"issuer\":\"https://auth.local\",\"jwks_uri\":\"/jwks\"}", Encoding.UTF8, "application/json")
+                });
+            }
+
+            if (request.RequestUri!.AbsolutePath == "/jwks")
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"keys\":[{\"kty\":\"RSA\",\"kid\":\"k1\"}]}", Encoding.UTF8, "application/json")
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        });
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://auth.local") };
+        var client = BuildClient(httpClient);
+
+        var jwks = await client.GetJsonWebKeySetAsync();
+
+        Assert.Single(jwks.Keys);
+        Assert.Equal("k1", jwks.Keys[0].KeyId);
     }
 
     private static AuthApiClient BuildClient(HttpClient httpClient)

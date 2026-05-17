@@ -53,9 +53,7 @@ public sealed class DownstreamTokenService
 
     public async Task<string> GetAccessTokenAsync(CancellationToken cancellationToken)
     {
-        var tokenResponse = await _authApiClient.RequestClientCredentialsTokenAsync(
-            scope: "orders.read orders.write",
-            cancellationToken: cancellationToken);
+        var tokenResponse = await _authApiClient.RequestClientCredentialsTokenAsync(cancellationToken);
 
         return tokenResponse.AccessToken;
     }
@@ -129,9 +127,7 @@ public sealed class OrdersPublisher
 
     public async Task PublishAsync(object payload, CancellationToken cancellationToken)
     {
-        var token = await _authApiClient.RequestClientCredentialsTokenAsync(
-            scope: "orders.write",
-            cancellationToken: cancellationToken);
+        var token = await _authApiClient.RequestClientCredentialsTokenAsync(cancellationToken);
 
         _httpClient.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token.AccessToken);
@@ -198,6 +194,18 @@ public sealed class PermissionPolicyBootstrapper
 }
 ```
 
+
+## Local token validation (recommended for resource APIs)
+
+For resource APIs, prefer local JWT validation with OpenID metadata + JWKS over introspection in most cases.
+
+```csharp
+var configuration = await authApiClient.GetOpenIdConfigurationAsync(cancellationToken);
+var jwks = await authApiClient.GetJsonWebKeySetAsync(cancellationToken);
+```
+
+You can use these documents to configure your API token validation pipeline and key refresh strategy.
+
 ## Error handling
 
 The SDK throws `AuthApiClientException` for non-success responses and payload-level failures.
@@ -207,7 +215,7 @@ using AuthPlaypen.Client.Sdk;
 
 try
 {
-    var token = await authApiClient.RequestClientCredentialsTokenAsync("orders.read", cancellationToken);
+    var token = await authApiClient.RequestClientCredentialsTokenAsync(cancellationToken);
 }
 catch (AuthApiClientException ex)
 {
