@@ -30,7 +30,7 @@ public class ActorContextServiceTests
         // Assert
         Assert.Equal("Test User", actor.DisplayName);
         Assert.Equal("test.user@example.com", actor.Email);
-        Assert.False(actor.IsSystemActor);
+        Assert.False(actor.IsSystem);
     }
 
     [Fact]
@@ -45,7 +45,7 @@ public class ActorContextServiceTests
         // Assert
         Assert.Equal("System", actor.DisplayName);
         Assert.Null(actor.Email);
-        Assert.True(actor.IsSystemActor);
+        Assert.True(actor.IsSystem);
     }
 
     [Fact]
