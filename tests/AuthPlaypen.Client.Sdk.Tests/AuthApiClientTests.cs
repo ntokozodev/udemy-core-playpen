@@ -11,6 +11,7 @@ public class AuthApiClientTests
     [Fact]
     public async Task RequestClientCredentialsTokenAsync_SendsExpectedPayload_AndParsesToken()
     {
+        // Arrange
         HttpRequestMessage? capturedRequest = null;
         var handler = new StubHttpMessageHandler(async request =>
         {
@@ -31,8 +32,10 @@ public class AuthApiClientTests
         using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://auth.local") };
         var client = BuildClient(httpClient);
 
+        // Act
         var result = await client.RequestClientCredentialsTokenAsync(["orders.read", "orders.write"]);
 
+        // Assert
         Assert.NotNull(capturedRequest);
         Assert.Equal(HttpMethod.Post, capturedRequest!.Method);
         Assert.Equal("/connect/token", capturedRequest.RequestUri!.AbsolutePath);
@@ -51,6 +54,7 @@ public class AuthApiClientTests
     [Fact]
     public async Task RequestClientCredentialsTokenAsync_WithoutScopes_DoesNotSendScopeField()
     {
+        // Arrange
         HttpRequestMessage? capturedRequest = null;
         var handler = new StubHttpMessageHandler(async request =>
         {
@@ -71,8 +75,10 @@ public class AuthApiClientTests
         using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://auth.local") };
         var client = BuildClient(httpClient);
 
+        // Act
         _ = await client.RequestClientCredentialsTokenAsync();
 
+        // Assert
         var body = await capturedRequest!.Content!.ReadAsStringAsync();
         Assert.DoesNotContain("scope=", body);
     }
@@ -80,6 +86,7 @@ public class AuthApiClientTests
     [Fact]
     public async Task IntrospectTokenAsync_ThrowsFriendlyException_WhenApiFails()
     {
+        // Arrange
         var handler = new StubHttpMessageHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
         {
             Content = new StringContent("invalid token")
@@ -88,8 +95,10 @@ public class AuthApiClientTests
         using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://auth.local") };
         var client = BuildClient(httpClient);
 
+        // Act
         var ex = await Assert.ThrowsAsync<AuthApiClientException>(() => client.IntrospectTokenAsync("abc-token"));
 
+        // Assert
         Assert.Contains("Introspection request failed (400)", ex.Message);
         Assert.Contains("invalid token", ex.Message);
     }
@@ -97,6 +106,7 @@ public class AuthApiClientTests
     [Fact]
     public async Task GetPermissionScopeMapAsync_ParsesPermissionsEnvelope_AndDeduplicatesScopes()
     {
+        // Arrange
         var json = """
             {
               "permissions": {
@@ -114,8 +124,10 @@ public class AuthApiClientTests
         using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://auth.local") };
         var client = BuildClient(httpClient);
 
+        // Act
         var map = await client.GetPermissionScopeMapAsync();
 
+        // Assert
         Assert.Equal(2, map.Count);
         Assert.Equal(["orders.read", "orders.list"], map["orders.read"]);
         Assert.Equal(["orders.write"], map["orders.write"]);
@@ -124,6 +136,7 @@ public class AuthApiClientTests
     [Fact]
     public async Task GetJsonWebKeySetAsync_UsesDiscoveryDocumentJwksUri()
     {
+        // Arrange
         var handler = new StubHttpMessageHandler(request =>
         {
             if (request.RequestUri!.AbsolutePath == "/.well-known/openid-configuration")
@@ -148,8 +161,10 @@ public class AuthApiClientTests
         using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://auth.local") };
         var client = BuildClient(httpClient);
 
+        // Act
         var jwks = await client.GetJsonWebKeySetAsync();
 
+        // Assert
         Assert.Single(jwks.Keys);
         Assert.Equal("k1", jwks.Keys[0].KeyId);
     }
@@ -158,6 +173,7 @@ public class AuthApiClientTests
     [Fact]
     public async Task GetJsonWebKeySetAsync_ThrowsFriendlyException_WhenDiscoveryHasNoJwksUri()
     {
+        // Arrange
         var handler = new StubHttpMessageHandler(request =>
         {
             if (request.RequestUri!.AbsolutePath == "/.well-known/openid-configuration")
@@ -174,8 +190,10 @@ public class AuthApiClientTests
         using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://auth.local") };
         var client = BuildClient(httpClient);
 
+        // Act
         var ex = await Assert.ThrowsAsync<AuthApiClientException>(() => client.GetJsonWebKeySetAsync());
 
+        // Assert
         Assert.Contains("jwks_uri", ex.Message);
     }
 
