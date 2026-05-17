@@ -43,7 +43,7 @@ public sealed class AuthApiClient : IAuthApiClient
     {
         using var response = await _httpClient.GetAsync(_options.PermissionMetadataEndpoint, cancellationToken);
         response.EnsureSuccessStatusCode();
-        using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var stream = await response.Content.ReadAsStreamAsync();
         using var doc = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
         var root = doc.RootElement;
         var mapNode = root.ValueKind == JsonValueKind.Object && root.TryGetProperty("permissions", out var permissionsNode) ? permissionsNode : root;
