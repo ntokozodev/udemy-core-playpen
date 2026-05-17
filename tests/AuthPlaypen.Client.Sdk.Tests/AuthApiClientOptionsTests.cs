@@ -8,9 +8,6 @@ public class AuthApiClientOptionsTests
     [Fact]
     public void Default_Values_AreExpected()
     {
-        // Arrange
-        // (no external dependencies)
-
         // Act
         var options = new AuthApiClientOptions();
 
