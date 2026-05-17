@@ -8,8 +8,10 @@ public class AuthApiClientOptionsTests
     [Fact]
     public void Default_Values_AreExpected()
     {
+        // Act
         var options = new AuthApiClientOptions();
 
+        // Assert
         Assert.Equal("https://localhost:5100", options.Authority);
         Assert.Equal("/connect/token", options.TokenEndpoint);
         Assert.Equal("/connect/introspect", options.IntrospectionEndpoint);

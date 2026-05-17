@@ -8,8 +8,10 @@ public class AuthApiClientExceptionTests
     [Fact]
     public void Ctor_SetsMessage()
     {
+        // Act
         var ex = new AuthApiClientException("boom");
 
+        // Assert
         Assert.Equal("boom", ex.Message);
     }
 }
