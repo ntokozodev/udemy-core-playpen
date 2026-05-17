@@ -5,20 +5,20 @@ namespace AuthPlaypen.Client;
 public sealed class AuthApiIntrospectionResponse
 {
     [JsonPropertyName("active")]
-    public bool Active { get; init; }
+    public bool Active { get; set; }
 
     [JsonPropertyName("scope")]
-    public string? Scope { get; init; }
+    public string? Scope { get; set; }
 
     [JsonPropertyName("client_id")]
-    public string? ClientId { get; init; }
+    public string? ClientId { get; set; }
 
     [JsonPropertyName("sub")]
-    public string? Subject { get; init; }
+    public string? Subject { get; set; }
 
     [JsonPropertyName("token_type")]
-    public string? TokenType { get; init; }
+    public string? TokenType { get; set; }
 
     [JsonPropertyName("exp")]
-    public long? ExpiresAtUnix { get; init; }
+    public long? ExpiresAtUnix { get; set; }
 }
