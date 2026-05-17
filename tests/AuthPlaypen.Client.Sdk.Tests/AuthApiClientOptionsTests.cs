@@ -1,4 +1,5 @@
-using AuthPlaypen.Client.Sdk;
+using AuthPlaypen.Client;
+using Xunit;
 
 namespace AuthPlaypen.Client.Sdk.Tests;
 
@@ -9,7 +10,8 @@ public class AuthApiClientOptionsTests
     {
         var options = new AuthApiClientOptions();
 
-        Assert.Equal("connect/token", options.TokenPath);
-        Assert.Equal("connect/introspect", options.IntrospectionPath);
+        Assert.Equal("https://localhost:5100", options.Authority);
+        Assert.Equal("/connect/token", options.TokenEndpoint);
+        Assert.Equal("/connect/introspect", options.IntrospectionEndpoint);
     }
 }

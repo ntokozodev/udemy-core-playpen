@@ -1,0 +1,111 @@
+using System.Net;
+using System.Text;
+using AuthPlaypen.Client;
+using Microsoft.Extensions.Options;
+using Xunit;
+
+namespace AuthPlaypen.Client.Sdk.Tests;
+
+public class AuthApiClientTests
+{
+    [Fact]
+    public async Task RequestClientCredentialsTokenAsync_SendsExpectedPayload_AndParsesToken()
+    {
+        HttpRequestMessage? capturedRequest = null;
+        var handler = new StubHttpMessageHandler(async request =>
+        {
+            capturedRequest = request;
+            var json = """
+                {
+                  "access_token": "token-123",
+                  "token_type": "Bearer",
+                  "expires_in": 3600
+                }
+                """;
+            return await Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            });
+        });
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://auth.local") };
+        var client = BuildClient(httpClient);
+
+        var result = await client.RequestClientCredentialsTokenAsync(["orders.read", "orders.write"]);
+
+        Assert.NotNull(capturedRequest);
+        Assert.Equal(HttpMethod.Post, capturedRequest!.Method);
+        Assert.Equal("/connect/token", capturedRequest.RequestUri!.AbsolutePath);
+
+        var body = await capturedRequest.Content!.ReadAsStringAsync();
+        Assert.Contains("grant_type=client_credentials", body);
+        Assert.Contains("client_id=sdk-client", body);
+        Assert.Contains("client_secret=sdk-secret", body);
+        Assert.Contains("scope=orders.read+orders.write", body);
+
+        Assert.Equal("token-123", result.AccessToken);
+        Assert.Equal("Bearer", result.TokenType);
+        Assert.Equal(3600, result.ExpiresIn);
+    }
+
+    [Fact]
+    public async Task IntrospectTokenAsync_ThrowsFriendlyException_WhenApiFails()
+    {
+        var handler = new StubHttpMessageHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.BadRequest)
+        {
+            Content = new StringContent("invalid token")
+        }));
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://auth.local") };
+        var client = BuildClient(httpClient);
+
+        var ex = await Assert.ThrowsAsync<AuthApiClientException>(() => client.IntrospectTokenAsync("abc-token"));
+
+        Assert.Contains("Introspection request failed (400)", ex.Message);
+        Assert.Contains("invalid token", ex.Message);
+    }
+
+    [Fact]
+    public async Task GetPermissionScopeMapAsync_ParsesPermissionsEnvelope_AndDeduplicatesScopes()
+    {
+        var json = """
+            {
+              "permissions": {
+                "orders.read": ["orders.read", "orders.read", "orders.list"],
+                "orders.write": "orders.write"
+              }
+            }
+            """;
+
+        var handler = new StubHttpMessageHandler(_ => Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        }));
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://auth.local") };
+        var client = BuildClient(httpClient);
+
+        var map = await client.GetPermissionScopeMapAsync();
+
+        Assert.Equal(2, map.Count);
+        Assert.Equal(["orders.read", "orders.list"], map["orders.read"]);
+        Assert.Equal(["orders.write"], map["orders.write"]);
+    }
+
+    private static AuthApiClient BuildClient(HttpClient httpClient)
+    {
+        var options = Options.Create(new AuthApiClientOptions
+        {
+            ClientId = "sdk-client",
+            ClientSecret = "sdk-secret"
+        });
+
+        return new AuthApiClient(httpClient, options);
+    }
+
+    private sealed class StubHttpMessageHandler(Func<HttpRequestMessage, Task<HttpResponseMessage>> responder) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            => responder(request);
+    }
+}
