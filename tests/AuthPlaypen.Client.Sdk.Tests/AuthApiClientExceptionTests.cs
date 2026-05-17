@@ -1,15 +1,15 @@
-using AuthPlaypen.Client.Sdk;
+using AuthPlaypen.Client;
+using Xunit;
 
 namespace AuthPlaypen.Client.Sdk.Tests;
 
 public class AuthApiClientExceptionTests
 {
     [Fact]
-    public void Ctor_SetsStatusCode_AndMessage()
+    public void Ctor_SetsMessage()
     {
-        var ex = new AuthApiClientException("boom", 400);
+        var ex = new AuthApiClientException("boom");
 
         Assert.Equal("boom", ex.Message);
-        Assert.Equal(400, ex.StatusCode);
     }
 }
