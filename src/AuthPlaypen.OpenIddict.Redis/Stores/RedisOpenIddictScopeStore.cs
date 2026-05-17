@@ -222,7 +222,7 @@ public sealed class RedisOpenIddictScopeStore(IConnectionMultiplexer multiplexer
         foreach (var endpoint in multiplexer.GetEndPoints())
         {
             var server = multiplexer.GetServer(endpoint);
-            foreach (var key in server.Keys(pattern: "oidc:scopes:id:*").Select(static x => (string)x))
+            foreach (var key in server.Keys(pattern: "oidc:scopes:id:*").Select(static x => x.ToString()))
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 var payload = await _db.StringGetAsync(key);

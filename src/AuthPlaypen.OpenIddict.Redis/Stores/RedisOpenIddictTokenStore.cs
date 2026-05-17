@@ -54,8 +54,13 @@ public sealed class RedisOpenIddictTokenStore(IConnectionMultiplexer multiplexer
         }
     }
 
-    public async IAsyncEnumerable<RedisOpenIddictToken> FindAsync(string subject, string client, string status, string type, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    public async IAsyncEnumerable<RedisOpenIddictToken> FindAsync(string? subject, string? client, string? status, string? type, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(subject) || string.IsNullOrWhiteSpace(client) || string.IsNullOrWhiteSpace(status) || string.IsNullOrWhiteSpace(type))
+        {
+            yield break;
+        }
+
         var tokenIds = await IntersectSetMembersAsync(
             RedisOpenIddictKeys.TokensBySubjectAndClient(subject, client),
             RedisOpenIddictKeys.TokensByStatus(status),
@@ -296,22 +301,22 @@ public sealed class RedisOpenIddictTokenStore(IConnectionMultiplexer multiplexer
 
     private async Task AddIndexesAsync(RedisOpenIddictToken token)
     {
-        await AddIndexIfSet(RedisOpenIddictKeys.TokensByApplicationId(token.ApplicationId), token.Id);
-        await AddIndexIfSet(RedisOpenIddictKeys.TokensByAuthorizationId(token.AuthorizationId), token.Id);
-        await AddIndexIfSet(RedisOpenIddictKeys.TokensBySubject(token.Subject), token.Id);
-        await AddIndexIfSet(RedisOpenIddictKeys.TokensBySubjectAndClient(token.Subject, token.ApplicationId), token.Id);
-        await AddIndexIfSet(RedisOpenIddictKeys.TokensByStatus(token.Status), token.Id);
-        await AddIndexIfSet(RedisOpenIddictKeys.TokensByType(token.Type), token.Id);
+        await AddIndexIfSet(token.ApplicationId is null ? null : RedisOpenIddictKeys.TokensByApplicationId(token.ApplicationId), token.Id);
+        await AddIndexIfSet(token.AuthorizationId is null ? null : RedisOpenIddictKeys.TokensByAuthorizationId(token.AuthorizationId), token.Id);
+        await AddIndexIfSet(token.Subject is null ? null : RedisOpenIddictKeys.TokensBySubject(token.Subject), token.Id);
+        await AddIndexIfSet(token.Subject is null || token.ApplicationId is null ? null : RedisOpenIddictKeys.TokensBySubjectAndClient(token.Subject, token.ApplicationId), token.Id);
+        await AddIndexIfSet(token.Status is null ? null : RedisOpenIddictKeys.TokensByStatus(token.Status), token.Id);
+        await AddIndexIfSet(token.Type is null ? null : RedisOpenIddictKeys.TokensByType(token.Type), token.Id);
     }
 
     private async Task RemoveIndexesAsync(RedisOpenIddictToken token)
     {
-        await RemoveIndexIfSet(RedisOpenIddictKeys.TokensByApplicationId(token.ApplicationId), token.Id);
-        await RemoveIndexIfSet(RedisOpenIddictKeys.TokensByAuthorizationId(token.AuthorizationId), token.Id);
-        await RemoveIndexIfSet(RedisOpenIddictKeys.TokensBySubject(token.Subject), token.Id);
-        await RemoveIndexIfSet(RedisOpenIddictKeys.TokensBySubjectAndClient(token.Subject, token.ApplicationId), token.Id);
-        await RemoveIndexIfSet(RedisOpenIddictKeys.TokensByStatus(token.Status), token.Id);
-        await RemoveIndexIfSet(RedisOpenIddictKeys.TokensByType(token.Type), token.Id);
+        await RemoveIndexIfSet(token.ApplicationId is null ? null : RedisOpenIddictKeys.TokensByApplicationId(token.ApplicationId), token.Id);
+        await RemoveIndexIfSet(token.AuthorizationId is null ? null : RedisOpenIddictKeys.TokensByAuthorizationId(token.AuthorizationId), token.Id);
+        await RemoveIndexIfSet(token.Subject is null ? null : RedisOpenIddictKeys.TokensBySubject(token.Subject), token.Id);
+        await RemoveIndexIfSet(token.Subject is null || token.ApplicationId is null ? null : RedisOpenIddictKeys.TokensBySubjectAndClient(token.Subject, token.ApplicationId), token.Id);
+        await RemoveIndexIfSet(token.Status is null ? null : RedisOpenIddictKeys.TokensByStatus(token.Status), token.Id);
+        await RemoveIndexIfSet(token.Type is null ? null : RedisOpenIddictKeys.TokensByType(token.Type), token.Id);
     }
 
     private async Task<List<RedisOpenIddictToken>> ResolveTokensForRevokeAsync(string? subject, string? client, string? status, string? type, CancellationToken cancellationToken)
