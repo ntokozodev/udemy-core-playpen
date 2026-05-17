@@ -154,6 +154,31 @@ public class AuthApiClientTests
         Assert.Equal("k1", jwks.Keys[0].KeyId);
     }
 
+
+    [Fact]
+    public async Task GetJsonWebKeySetAsync_ThrowsFriendlyException_WhenDiscoveryHasNoJwksUri()
+    {
+        var handler = new StubHttpMessageHandler(request =>
+        {
+            if (request.RequestUri!.AbsolutePath == "/.well-known/openid-configuration")
+            {
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent("{\"issuer\":\"https://auth.local\"}", Encoding.UTF8, "application/json")
+                });
+            }
+
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
+        });
+
+        using var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://auth.local") };
+        var client = BuildClient(httpClient);
+
+        var ex = await Assert.ThrowsAsync<AuthApiClientException>(() => client.GetJsonWebKeySetAsync());
+
+        Assert.Contains("jwks_uri", ex.Message);
+    }
+
     private static AuthApiClient BuildClient(HttpClient httpClient)
     {
         var options = Options.Create(new AuthApiClientOptions
