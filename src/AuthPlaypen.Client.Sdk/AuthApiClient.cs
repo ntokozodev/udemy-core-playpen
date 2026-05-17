@@ -16,6 +16,9 @@ public sealed class AuthApiClient : IAuthApiClient
         _options = options.Value;
     }
 
+    public Task<AuthApiTokenResponse> RequestClientCredentialsTokenAsync(CancellationToken cancellationToken = default)
+        => RequestClientCredentialsTokenAsync(Array.Empty<string>(), cancellationToken);
+
     public async Task<AuthApiTokenResponse> RequestClientCredentialsTokenAsync(IEnumerable<string> scopes, CancellationToken cancellationToken = default)
     {
         if (scopes is null) throw new ArgumentNullException(nameof(scopes));
@@ -57,5 +60,27 @@ public sealed class AuthApiClient : IAuthApiClient
             if (scopes.Length > 0) output[property.Name] = scopes;
         }
         return output;
+    }
+
+    public async Task<OpenIdConfigurationDocument> GetOpenIdConfigurationAsync(CancellationToken cancellationToken = default)
+    {
+        using var response = await _httpClient.GetAsync("/.well-known/openid-configuration", cancellationToken);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<OpenIdConfigurationDocument>(JsonOptions, cancellationToken);
+        return result ?? throw new AuthApiClientException("OpenID configuration response could not be parsed.");
+    }
+
+    public async Task<JsonWebKeySetDocument> GetJsonWebKeySetAsync(CancellationToken cancellationToken = default)
+    {
+        var config = await GetOpenIdConfigurationAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(config.JwksUri))
+        {
+            throw new AuthApiClientException("OpenID configuration did not include jwks_uri.");
+        }
+
+        using var response = await _httpClient.GetAsync(config.JwksUri, cancellationToken);
+        response.EnsureSuccessStatusCode();
+        var result = await response.Content.ReadFromJsonAsync<JsonWebKeySetDocument>(JsonOptions, cancellationToken);
+        return result ?? throw new AuthApiClientException("JWKS response could not be parsed.");
     }
 }
